@@ -13,7 +13,7 @@
   "documentation": "https://github.com/HertBox/ha-baby-tracker",
   "integration_type": "service",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/HertBox/ha-baby-tracker/issues",
   "requirements": [],
-  "version": "0.4.0",
-  "issue_tracker": "https://github.com/HertBox/ha-baby-tracker/issues"
+  "version": "0.4.0"
 }
