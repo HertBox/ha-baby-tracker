@@ -1,0 +1,30 @@
+# Changelog
+
+Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico (MAYOR.MENOR.PARCHE).
+Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones menores.
+
+## [0.4.0] - sin publicar
+### Planeado
+- Varios bebés por instalación (una entrada por bebé).
+- Traducción completa al inglés.
+- Blueprints para botón, recordatorio, leche materna y voz.
+
+## [0.3.0] - 2026-09-30
+### Agregado
+- Pañales: pipí, popó o ambos; color y consistencia para popó con valores habituales configurables.
+- Pantalla "Hoy" con última y siguiente toma destacadas; edición del tamaño del biberón en curso.
+- Métricas de ritmo (oz/h), distribución por hora del día y pañales por tipo.
+- Biberones en pausa: dar leche materna y continuar después con la fórmula.
+- Leche materna: extracciones, reserva (refrigerador / ambiente) con caducidad y avisos.
+- Opción "Configurar": nombre, fecha de nacimiento, sexo, unidad (oz/ml) y popó habitual.
+- Nombre del proyecto: Baby Tracker.
+
+## [0.2.0] - 2026-09-29
+### Agregado
+- Modelo de biberones con tomas incrementales (cada toma suma al biberón en curso).
+- Panel en la barra lateral: Hoy, Tomas, Medidas, Gráficas y Ajustes.
+- Meta diaria según la indicación del pediatra (oz por toma e intervalo).
+
+## [0.1.0] - 2026-09-28
+### Agregado
+- Integración inicial: registro de tomas y medidas en SQLite, sensores de KPIs.

@@ -1,0 +1,325 @@
+registrar_toma:
+  fields:
+    oz_tomadas:
+      selector:
+        number: {min: 0.25, max: 12, step: 0.25, unit_of_measurement: oz}
+    oz_sobrantes:
+      selector:
+        number: {min: 0, max: 12, step: 0.25, unit_of_measurement: oz}
+    nuevo_biberon:
+      selector:
+        boolean:
+    fin:
+      selector:
+        datetime:
+    acumular_segundos:
+      selector:
+        number: {min: 0, max: 600, unit_of_measurement: s, mode: box}
+    tipo:
+      selector:
+        select: {translation_key: tipo, options: [formula, materna, mixta]}
+    confianza:
+      selector:
+        select: {translation_key: confianza, options: [exacto, estimado, inferido]}
+    fuente:
+      example: boton
+      selector:
+        text:
+    nota:
+      selector:
+        text:
+
+corregir_toma:
+  fields:
+    id:
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+    fin:
+      selector:
+        datetime:
+    oz_tomadas:
+      selector:
+        number: {min: 0.25, max: 12, step: 0.25, unit_of_measurement: oz}
+    tipo:
+      selector:
+        select: {translation_key: tipo, options: [formula, materna, mixta]}
+    confianza:
+      selector:
+        select: {translation_key: confianza, options: [exacto, estimado, inferido]}
+    nota:
+      selector:
+        text:
+    mover:
+      selector:
+        select: {translation_key: mover, options: [nuevo, anterior]}
+
+borrar_toma:
+  fields:
+    id:
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+restaurar_toma:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+nuevo_biberon:
+  fields:
+    oz:
+      selector:
+        number: {min: 0.5, max: 12, step: 0.5, unit_of_measurement: oz}
+    tipo:
+      selector:
+        select: {translation_key: tipo, options: [formula, materna, mixta]}
+
+cerrar_biberon:
+  fields:
+    id:
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+borrar_biberon:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+corregir_biberon:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+    hecho:
+      selector:
+        datetime:
+    ubicacion:
+      selector:
+        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
+    oz:
+      selector:
+        number: {min: 0.5, max: 12, step: 0.5, unit_of_measurement: oz}
+    tipo:
+      selector:
+        select: {translation_key: tipo, options: [formula, materna, mixta]}
+    nota:
+      selector:
+        text:
+    reabrir:
+      selector:
+        boolean:
+
+registrar_medida:
+  fields:
+    fecha:
+      selector:
+        datetime:
+    peso_kg:
+      selector:
+        number: {min: 0.5, max: 30, step: 0.01, unit_of_measurement: kg, mode: box}
+    talla_cm:
+      selector:
+        number: {min: 20, max: 130, step: 0.1, unit_of_measurement: cm, mode: box}
+    perimetro_cm:
+      selector:
+        number: {min: 20, max: 60, step: 0.1, unit_of_measurement: cm, mode: box}
+    nota:
+      selector:
+        text:
+
+borrar_medida:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+listar_tomas:
+  fields:
+    desde:
+      required: true
+      selector:
+        datetime:
+    hasta:
+      required: true
+      selector:
+        datetime:
+    borradas:
+      selector:
+        boolean:
+
+listar_biberones:
+  fields:
+    desde:
+      required: true
+      selector:
+        datetime:
+    hasta:
+      required: true
+      selector:
+        datetime:
+
+listar_medidas:
+
+guardar_leche:
+  fields:
+    oz:
+      required: true
+      selector:
+        number: {min: 0.25, max: 12, step: 0.25, unit_of_measurement: oz}
+    hecho:
+      selector:
+        datetime:
+    ubicacion:
+      selector:
+        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
+    nota:
+      selector:
+        text:
+
+usar_reserva:
+  fields:
+    id:
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+    pausar_actual:
+      selector:
+        boolean:
+
+reanudar_biberon:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+mover_reserva:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+    ubicacion:
+      required: true
+      selector:
+        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
+
+descartar_reserva:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+registrar_extraccion:
+  fields:
+    fin:
+      selector:
+        datetime:
+    oz_izq:
+      selector:
+        number: {min: 0, max: 12, step: 0.25, unit_of_measurement: oz}
+    oz_der:
+      selector:
+        number: {min: 0, max: 12, step: 0.25, unit_of_measurement: oz}
+    duracion_min:
+      selector:
+        number: {min: 0, max: 180, unit_of_measurement: min, mode: box}
+    guardar:
+      selector:
+        boolean:
+    biberones:
+      selector:
+        object:
+    ubicacion:
+      selector:
+        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
+    nota:
+      selector:
+        text:
+
+borrar_extraccion:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+listar_reservas:
+
+listar_extracciones:
+  fields:
+    desde:
+      required: true
+      selector:
+        datetime:
+    hasta:
+      required: true
+      selector:
+        datetime:
+
+registrar_panal:
+  fields:
+    tipo:
+      required: true
+      selector:
+        select: {translation_key: tipo_panal, options: [pipi, popo, ambos]}
+    fin:
+      selector:
+        datetime:
+    color:
+      selector:
+        select: {translation_key: color_popo, options: [amarillo, verde, cafe, naranja, negro, rojo, blanco, no_se]}
+    consistencia:
+      selector:
+        select: {translation_key: consistencia_popo, options: [liquida, grumosa, pastosa, dura, no_se]}
+    nota:
+      selector:
+        text:
+    fuente:
+      selector:
+        text:
+
+corregir_panal:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+    tipo:
+      selector:
+        select: {translation_key: tipo_panal, options: [pipi, popo, ambos]}
+    fin:
+      selector:
+        datetime:
+    color:
+      selector:
+        select: {translation_key: color_popo, options: [amarillo, verde, cafe, naranja, negro, rojo, blanco, no_se]}
+    consistencia:
+      selector:
+        select: {translation_key: consistencia_popo, options: [liquida, grumosa, pastosa, dura, no_se]}
+    nota:
+      selector:
+        text:
+
+borrar_panal:
+  fields:
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+
+listar_panales:
+  fields:
+    desde:
+      required: true
+      selector:
+        datetime:
+    hasta:
+      required: true
+      selector:
+        datetime:

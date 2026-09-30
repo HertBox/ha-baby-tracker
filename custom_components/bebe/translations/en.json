@@ -1,0 +1,696 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Baby Tracker",
+        "data": {
+          "nombre": "Nombre",
+          "fecha_nacimiento": "Fecha de nacimiento",
+          "oz_default": "Oz por biberón (normalmente)",
+          "tipo_default": "Tipo de leche principal",
+          "sexo": "Sexo (para las curvas de crecimiento)",
+          "color_popo_default": "Color de popó habitual (se preselecciona)",
+          "consistencia_popo_default": "Consistencia de popó habitual (se preselecciona)",
+          "unidad": "Unidad de medida"
+        },
+        "description": "Datos de tu bebé. Los puedes cambiar después en «Configurar»."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Ya está configurado."
+    }
+  },
+  "selector": {
+    "tipo": {
+      "options": {
+        "formula": "Fórmula",
+        "materna": "Leche materna",
+        "mixta": "Mixta"
+      }
+    },
+    "confianza": {
+      "options": {
+        "exacto": "Exacto",
+        "estimado": "Estimado",
+        "inferido": "Inferido"
+      }
+    },
+    "mover": {
+      "options": {
+        "nuevo": "A un biberón nuevo",
+        "anterior": "Al biberón anterior"
+      }
+    },
+    "ubicacion": {
+      "options": {
+        "refrigerador": "Refrigerador",
+        "ambiente": "Temperatura ambiente"
+      }
+    },
+    "tipo_panal": {
+      "options": {
+        "pipi": "Pipí",
+        "popo": "Popó",
+        "ambos": "Ambos"
+      }
+    },
+    "color_popo": {
+      "options": {
+        "amarillo": "Amarillo",
+        "verde": "Verde",
+        "cafe": "Café",
+        "naranja": "Naranja",
+        "negro": "Negro",
+        "rojo": "Rojo",
+        "blanco": "Blanco / gris",
+        "no_se": "No sé"
+      }
+    },
+    "consistencia_popo": {
+      "options": {
+        "liquida": "Líquida",
+        "grumosa": "Grumosa",
+        "pastosa": "Pastosa",
+        "dura": "Dura",
+        "no_se": "No sé"
+      }
+    },
+    "sexo": {
+      "options": {
+        "nino": "Niño",
+        "nina": "Niña",
+        "sin_especificar": "Sin especificar"
+      }
+    },
+    "unidad": {
+      "options": {
+        "oz": "Onzas (oz)",
+        "ml": "Mililitros (ml)"
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "oz_por_biberon": {
+        "name": "Oz por biberón"
+      },
+      "meta_oz_toma": {
+        "name": "Meta oz por toma (pediatra)"
+      },
+      "intervalo_indicado": {
+        "name": "Intervalo indicado (pediatra)"
+      },
+      "limite_biberon": {
+        "name": "Límite para usar un biberón empezado"
+      },
+      "limite_materna": {
+        "name": "Límite de leche materna empezada"
+      },
+      "caducidad_ambiente": {
+        "name": "Caducidad materna a temperatura ambiente"
+      },
+      "caducidad_refri": {
+        "name": "Caducidad materna en refrigerador"
+      }
+    },
+    "sensor": {
+      "ultima_toma": {
+        "name": "Última toma"
+      },
+      "ultima_toma_oz": {
+        "name": "Última toma oz"
+      },
+      "proxima_toma": {
+        "name": "Próxima toma"
+      },
+      "oz_hoy": {
+        "name": "Oz hoy"
+      },
+      "tomas_hoy": {
+        "name": "Tomas hoy"
+      },
+      "oz_24h": {
+        "name": "Oz últimas 24 h"
+      },
+      "promedio_7d": {
+        "name": "Promedio oz por día 7 días"
+      },
+      "intervalo": {
+        "name": "Intervalo entre tomas"
+      },
+      "meta_oz_dia": {
+        "name": "Meta oz por día"
+      },
+      "avance_meta": {
+        "name": "Avance de meta"
+      },
+      "peso": {
+        "name": "Peso"
+      },
+      "talla": {
+        "name": "Talla"
+      },
+      "edad": {
+        "name": "Edad"
+      },
+      "biberon_restante": {
+        "name": "Biberón actual: quedan"
+      },
+      "biberon_vence": {
+        "name": "Biberón actual: vence"
+      },
+      "oz_por_toma": {
+        "name": "Oz por toma (7 días)"
+      },
+      "tomas_por_dia": {
+        "name": "Tomas por día (7 días)"
+      },
+      "biberones_hoy": {
+        "name": "Biberones hoy"
+      },
+      "pct_terminados": {
+        "name": "Biberones terminados (7 días)"
+      },
+      "desechado_7d": {
+        "name": "Fórmula desechada (7 días)"
+      },
+      "materna_hoy": {
+        "name": "Leche materna hoy"
+      },
+      "formula_hoy": {
+        "name": "Fórmula hoy"
+      },
+      "extraido_hoy": {
+        "name": "Extraído hoy"
+      },
+      "extraido_dia": {
+        "name": "Extracción promedio por día (7 días)"
+      },
+      "reserva_oz": {
+        "name": "Reserva de leche materna"
+      },
+      "reserva_caduca": {
+        "name": "Reserva: próxima caducidad"
+      },
+      "materna_desechada_7d": {
+        "name": "Leche materna desechada (7 días)"
+      },
+      "ritmo_oz_hora": {
+        "name": "Ritmo (oz por hora, 24 h)"
+      },
+      "ultimo_panal": {
+        "name": "Último pañal"
+      },
+      "ultimo_pipi": {
+        "name": "Último pipí"
+      },
+      "ultima_popo": {
+        "name": "Última popó"
+      },
+      "panales_hoy": {
+        "name": "Pañales hoy"
+      },
+      "panales_por_dia": {
+        "name": "Pañales por día (7 días)"
+      },
+      "intervalo_panales": {
+        "name": "Intervalo entre pañales"
+      }
+    }
+  },
+  "services": {
+    "registrar_toma": {
+      "name": "Registrar toma",
+      "description": "Suma oz tomadas al biberón en curso (siempre es continuación). Lo que exceda va a un biberón nuevo.",
+      "fields": {
+        "oz_tomadas": {
+          "name": "Oz tomadas",
+          "description": "Lo que tomó en esta toma."
+        },
+        "oz_sobrantes": {
+          "name": "Quedó en el biberón",
+          "description": "Alternativa a oz tomadas: tomó lo que quedaba menos esto (0 = se acabó lo que quedaba)."
+        },
+        "nuevo_biberon": {
+          "name": "Biberón nuevo",
+          "description": "Empieza un biberón nuevo antes de registrar (el anterior queda incompleto)."
+        },
+        "fin": {
+          "name": "Hora",
+          "description": "Cuándo terminó la toma (por defecto ahora)."
+        },
+        "acumular_segundos": {
+          "name": "Acumular (s)",
+          "description": "Si la última toma del biberón es de la misma fuente y de hace menos de esto, se suma a ella."
+        },
+        "tipo": {
+          "name": "Tipo",
+          "description": "Fórmula, materna o mixta."
+        },
+        "confianza": {
+          "name": "Confianza",
+          "description": "Exacto, estimado o inferido."
+        },
+        "fuente": {
+          "name": "Fuente",
+          "description": "boton, alexa, app, notificacion…"
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        }
+      }
+    },
+    "corregir_toma": {
+      "name": "Corregir toma",
+      "description": "Modifica una toma o la mueve de biberón. Sin 'id' corrige la última.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID de la toma (por defecto la última)."
+        },
+        "fin": {
+          "name": "Hora",
+          "description": "Nueva hora."
+        },
+        "oz_tomadas": {
+          "name": "Oz tomadas",
+          "description": "Nueva cantidad."
+        },
+        "tipo": {
+          "name": "Tipo",
+          "description": "Fórmula, materna o mixta."
+        },
+        "confianza": {
+          "name": "Confianza",
+          "description": "Exacto, estimado o inferido."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        },
+        "mover": {
+          "name": "Mover",
+          "description": "'nuevo': esta toma y las siguientes pasan a un biberón nuevo; 'anterior': se une al biberón anterior."
+        }
+      }
+    },
+    "borrar_toma": {
+      "name": "Borrar toma",
+      "description": "Borra una toma (se puede restaurar). Sin 'id' borra la última.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID de la toma (por defecto la última)."
+        }
+      }
+    },
+    "restaurar_toma": {
+      "name": "Restaurar toma",
+      "description": "Recupera una toma borrada.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID de la toma borrada."
+        }
+      }
+    },
+    "registrar_medida": {
+      "name": "Registrar medida",
+      "description": "Registra peso, talla y/o perímetro cefálico.",
+      "fields": {
+        "fecha": {
+          "name": "Fecha",
+          "description": "Cuándo se midió (por defecto ahora)."
+        },
+        "peso_kg": {
+          "name": "Peso (kg)",
+          "description": "Peso en kilogramos."
+        },
+        "talla_cm": {
+          "name": "Talla (cm)",
+          "description": "Talla en centímetros."
+        },
+        "perimetro_cm": {
+          "name": "Perímetro cefálico (cm)",
+          "description": "Perímetro de la cabeza."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        }
+      }
+    },
+    "borrar_medida": {
+      "name": "Borrar medida",
+      "description": "Borra una medida de peso/talla.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID de la medida."
+        }
+      }
+    },
+    "listar_tomas": {
+      "name": "Listar tomas",
+      "description": "Devuelve las tomas entre dos fechas.",
+      "fields": {
+        "desde": {
+          "name": "Desde",
+          "description": "Inicio del rango."
+        },
+        "hasta": {
+          "name": "Hasta",
+          "description": "Fin del rango (exclusivo)."
+        },
+        "borradas": {
+          "name": "Incluir borradas",
+          "description": "Incluir tomas borradas."
+        }
+      }
+    },
+    "listar_medidas": {
+      "name": "Listar medidas",
+      "description": "Devuelve todas las medidas registradas."
+    },
+    "nuevo_biberon": {
+      "name": "Nuevo biberón",
+      "description": "Empieza un biberón nuevo; el anterior queda incompleto y su resto cuenta como desechado.",
+      "fields": {
+        "oz": {
+          "name": "Oz",
+          "description": "Tamaño (por defecto las oz por biberón)."
+        },
+        "tipo": {
+          "name": "Tipo",
+          "description": "Fórmula, materna o mixta."
+        }
+      }
+    },
+    "cerrar_biberon": {
+      "name": "Cerrar biberón",
+      "description": "Cierra el biberón (desecha lo que quedó). Sin 'id', el actual.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID del biberón."
+        }
+      }
+    },
+    "borrar_biberon": {
+      "name": "Deshacer biberón",
+      "description": "Borra un biberón sin tomas y reabre el anterior.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID del biberón."
+        }
+      }
+    },
+    "corregir_biberon": {
+      "name": "Corregir biberón",
+      "description": "Cambia tamaño, tipo o nota de un biberón, o lo reabre.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID del biberón."
+        },
+        "oz": {
+          "name": "Oz",
+          "description": "Tamaño."
+        },
+        "tipo": {
+          "name": "Tipo",
+          "description": "Fórmula, materna o mixta."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        },
+        "reabrir": {
+          "name": "Reabrir",
+          "description": "Vuelve a abrir un biberón cerrado."
+        },
+        "hecho": {
+          "name": "Hecho",
+          "description": "Cuándo se hizo (leche materna)."
+        },
+        "ubicacion": {
+          "name": "Dónde se guarda",
+          "description": "Refrigerador o temperatura ambiente."
+        }
+      }
+    },
+    "listar_biberones": {
+      "name": "Listar biberones",
+      "description": "Devuelve los biberones preparados entre dos fechas.",
+      "fields": {
+        "desde": {
+          "name": "Desde",
+          "description": "Inicio del rango."
+        },
+        "hasta": {
+          "name": "Hasta",
+          "description": "Fin del rango (exclusivo)."
+        }
+      }
+    },
+    "guardar_leche": {
+      "name": "Guardar leche materna",
+      "description": "Agrega un biberón de leche materna a la reserva (no es el biberón en curso hasta usarlo).",
+      "fields": {
+        "oz": {
+          "name": "Oz",
+          "description": "Cantidad del biberón."
+        },
+        "hecho": {
+          "name": "Hecho",
+          "description": "Cuándo se hizo (por defecto ahora)."
+        },
+        "ubicacion": {
+          "name": "Dónde se guarda",
+          "description": "Refrigerador o temperatura ambiente."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        }
+      }
+    },
+    "usar_reserva": {
+      "name": "Usar leche de la reserva",
+      "description": "El biberón de reserva pasa a ser el biberón en curso. Sin id, el más antiguo sin caducar.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "Biberón de la reserva."
+        },
+        "pausar_actual": {
+          "name": "Pausar el biberón en curso",
+          "description": "Sí: el biberón en curso queda en pausa para continuarlo después. No: se tira lo que queda."
+        }
+      }
+    },
+    "mover_reserva": {
+      "name": "Mover leche de la reserva",
+      "description": "Cambia dónde se guarda un biberón de reserva.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "Biberón de la reserva."
+        },
+        "ubicacion": {
+          "name": "Dónde",
+          "description": "Refrigerador o temperatura ambiente."
+        }
+      }
+    },
+    "descartar_reserva": {
+      "name": "Desechar leche de la reserva",
+      "description": "Desecha un biberón de reserva (cuenta como leche desechada).",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "Biberón de la reserva."
+        }
+      }
+    },
+    "registrar_extraccion": {
+      "name": "Registrar extracción",
+      "description": "Registra una extracción de leche y, opcionalmente, la guarda en biberones de reserva.",
+      "fields": {
+        "fin": {
+          "name": "Hora",
+          "description": "Cuándo terminó (por defecto ahora)."
+        },
+        "oz_izq": {
+          "name": "Oz lado izquierdo",
+          "description": "Lado izquierdo."
+        },
+        "oz_der": {
+          "name": "Oz lado derecho",
+          "description": "Lado derecho."
+        },
+        "duracion_min": {
+          "name": "Duración (min)",
+          "description": "Minutos de extracción."
+        },
+        "guardar": {
+          "name": "Guardar en reserva",
+          "description": "Crear biberones de reserva con esta leche."
+        },
+        "biberones": {
+          "name": "Reparto en biberones",
+          "description": "Lista de oz por biberón, p. ej. [2, 1.5]. Sin indicar: un biberón con el total."
+        },
+        "ubicacion": {
+          "name": "Dónde se guarda",
+          "description": "Refrigerador o temperatura ambiente."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        }
+      }
+    },
+    "borrar_extraccion": {
+      "name": "Borrar extracción",
+      "description": "Borra una extracción y sus biberones de reserva sin usar.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID de la extracción."
+        }
+      }
+    },
+    "listar_reservas": {
+      "name": "Listar reserva",
+      "description": "Devuelve los biberones de leche materna en reserva."
+    },
+    "listar_extracciones": {
+      "name": "Listar extracciones",
+      "description": "Devuelve las extracciones entre dos fechas.",
+      "fields": {
+        "desde": {
+          "name": "Desde",
+          "description": "Inicio del rango."
+        },
+        "hasta": {
+          "name": "Hasta",
+          "description": "Fin del rango (exclusivo)."
+        }
+      }
+    },
+    "reanudar_biberon": {
+      "name": "Continuar biberón en pausa",
+      "description": "Un biberón en pausa vuelve a ser el biberón en curso.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "Biberón en pausa."
+        }
+      }
+    },
+    "registrar_panal": {
+      "name": "Registrar pañal",
+      "description": "Registra un cambio de pañal (pipí, popó o ambos).",
+      "fields": {
+        "tipo": {
+          "name": "Tipo",
+          "description": "Pipí, popó o ambos."
+        },
+        "fin": {
+          "name": "Hora",
+          "description": "Cuándo se cambió (por defecto ahora)."
+        },
+        "color": {
+          "name": "Color",
+          "description": "Solo para popó."
+        },
+        "consistencia": {
+          "name": "Consistencia",
+          "description": "Solo para popó."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        },
+        "fuente": {
+          "name": "Fuente",
+          "description": "boton, app, alexa…"
+        }
+      }
+    },
+    "corregir_panal": {
+      "name": "Corregir pañal",
+      "description": "Modifica un pañal registrado.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID del pañal."
+        },
+        "tipo": {
+          "name": "Tipo",
+          "description": "Pipí, popó o ambos."
+        },
+        "fin": {
+          "name": "Hora",
+          "description": "Cuándo se cambió (por defecto ahora)."
+        },
+        "color": {
+          "name": "Color",
+          "description": "Solo para popó."
+        },
+        "consistencia": {
+          "name": "Consistencia",
+          "description": "Solo para popó."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Texto libre."
+        }
+      }
+    },
+    "borrar_panal": {
+      "name": "Borrar pañal",
+      "description": "Borra un pañal registrado.",
+      "fields": {
+        "id": {
+          "name": "ID",
+          "description": "ID del pañal."
+        }
+      }
+    },
+    "listar_panales": {
+      "name": "Listar pañales",
+      "description": "Devuelve los pañales entre dos fechas.",
+      "fields": {
+        "desde": {
+          "name": "Desde",
+          "description": "Inicio."
+        },
+        "hasta": {
+          "name": "Hasta",
+          "description": "Fin (exclusivo)."
+        }
+      }
+    }
+  },
+  "title": "Baby Tracker",
+  "options": {
+    "step": {
+      "init": {
+        "title": "Datos del bebé",
+        "data": {
+          "nombre": "Nombre",
+          "fecha_nacimiento": "Fecha de nacimiento",
+          "sexo": "Sexo (para las curvas de crecimiento)",
+          "color_popo_default": "Color de popó habitual (se preselecciona)",
+          "consistencia_popo_default": "Consistencia de popó habitual (se preselecciona)",
+          "unidad": "Unidad de medida"
+        },
+        "description": "Cambia la popó habitual cuando cambie su alimentación o su edad."
+      }
+    }
+  }
+}
