@@ -12,7 +12,10 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
 > ⚠️ **Not medical advice.** Baby Tracker is a logging tool. Goals, limits and hints are general references;
 > decisions about your baby's feeding and health belong to your pediatrician.
 
-<!-- Screenshot: docs/img/today.png -->
+<p align="center">
+  <img src="docs/img/today.png" alt="Today tab" width="78%">
+  <img src="docs/img/mobile.png" alt="Today tab on a phone" width="20%">
+</p>
 
 ## Features
 
@@ -61,7 +64,17 @@ A **Baby Tracker** entry appears in the sidebar (and in the companion app):
 | **Charts** | Day / week / month charts |
 | **Settings** | Bottle size, pediatrician's plan, milk limits, hints from the last 7 days |
 
-<!-- Screenshots: docs/img/feedings.png · docs/img/charts.png · docs/img/milk.png -->
+| Feedings | Breast milk |
+|---|---|
+| ![Feedings](docs/img/feedings.png) | ![Breast milk](docs/img/milk.png) |
+| **Charts** | **Growth** |
+| ![Charts](docs/img/charts.png) | ![Growth](docs/img/growth.png) |
+
+<details><summary>Settings</summary>
+
+![Settings](docs/img/settings.png)
+
+</details>
 
 ## Blueprints
 

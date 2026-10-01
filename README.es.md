@@ -12,7 +12,12 @@ asistente de voz. Todo se guarda **localmente** en tu Home Assistant (SQLite): s
 > ⚠️ **No es consejo médico.** Baby Tracker es una herramienta de registro. Las metas, límites y sugerencias son
 > referencias generales; las decisiones sobre la alimentación y salud de tu bebé corresponden a su pediatra.
 
-<!-- Captura: docs/img/hoy.png -->
+<p align="center">
+  <img src="docs/img/today.png" alt="Pestaña Hoy" width="78%">
+  <img src="docs/img/mobile.png" alt="Pestaña Hoy en el teléfono" width="20%">
+</p>
+
+<sub>Capturas con el panel en inglés; con Home Assistant en español todo aparece en español.</sub>
 
 ## Qué hace
 
@@ -59,7 +64,17 @@ La pestaña **Ajustes** del panel tiene la indicación del pediatra (cantidad po
 | **Gráficas** | Día / semana / mes |
 | **Ajustes** | Tamaño del biberón, indicación del pediatra, límites de la leche, sugerencias de los últimos 7 días |
 
-<!-- Capturas: docs/img/tomas.png · docs/img/graficas.png · docs/img/materna.png -->
+| Tomas | Leche materna |
+|---|---|
+| ![Tomas](docs/img/feedings.png) | ![Leche materna](docs/img/milk.png) |
+| **Gráficas** | **Desarrollo** |
+| ![Gráficas](docs/img/charts.png) | ![Desarrollo](docs/img/growth.png) |
+
+<details><summary>Ajustes</summary>
+
+![Ajustes](docs/img/settings.png)
+
+</details>
 
 ## Blueprints
 
