@@ -11,6 +11,7 @@ Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones 
 - Copia automática de la base antes de cada migración de esquema (`<base>.antes-vN`).
 - Los biberones creados automáticamente usan el tipo de leche principal del bebé.
 - Inglés: integración (formularios, sensores, acciones) y panel completo; el panel usa el idioma del usuario de Home Assistant.
+- Mensajes de error traducibles (sección `exceptions` en `translations/*.json`).
 ### Corregido
 - El encabezado del panel podía trabarse al cambiar de bebé (recursión al actualizar la edad).
 ### Compatibilidad

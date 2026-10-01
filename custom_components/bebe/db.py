@@ -102,7 +102,12 @@ GROUP BY b.id
 
 
 class ErrorBebe(ValueError):
-    """Error de validación que se muestra al usuario."""
+    """Error de validación que se muestra al usuario; `clave` está en la sección "exceptions" de las traducciones."""
+
+    def __init__(self, clave: str, **datos: Any) -> None:
+        super().__init__(clave)
+        self.clave = clave
+        self.datos = {k: str(v) for k, v in datos.items()}
 
 
 def ahora_iso() -> str:
@@ -286,7 +291,7 @@ class BebeDB:
         """Un biberón en pausa vuelve a ser el biberón en curso."""
         with self._con() as con:
             if not any(b["id"] == bid for b in self._abiertos(con)):
-                raise ErrorBebe(f"El biberón {bid} no está abierto")
+                raise ErrorBebe("biberon_no_abierto", id=bid)
             anterior = self._abierto(con)
             con.execute("UPDATE biberones SET activado = ? WHERE id = ?", (marca_iso(), bid))
             b = self._biberon(con, bid)
@@ -312,7 +317,7 @@ class BebeDB:
         with self._con() as con:
             b = self._biberon(con, bid) if bid else self._abierto(con)
             if not b:
-                raise ErrorBebe("No hay biberón abierto")
+                raise ErrorBebe("sin_biberon_abierto")
             self._cerrar(con, b, ahora_iso())
             cerrado = self._biberon(con, b["id"])
         if cerrado is None:  # fórmula sin tomas: se descartó sin contar como desperdicio
@@ -324,9 +329,9 @@ class BebeDB:
         with self._con() as con:
             b = self._biberon(con, bid)
             if not b:
-                raise ErrorBebe(f"No existe el biberón {bid}")
+                raise ErrorBebe("biberon_no_existe", id=bid)
             if b["n_tomas"]:
-                raise ErrorBebe("El biberón ya tiene tomas; bórralas primero")
+                raise ErrorBebe("biberon_con_tomas")
             con.execute("UPDATE biberones SET borrado = 1 WHERE id = ?", (bid,))
             prev = con.execute(
                 "SELECT id FROM biberones WHERE borrado = 0 AND en_reserva = 0 AND id < ? AND cerrado = ? "
@@ -351,7 +356,7 @@ class BebeDB:
                 con.execute("UPDATE biberones SET cerrado = NULL WHERE id = ?", (bid,))
             b = self._biberon(con, bid)
         if not b:
-            raise ErrorBebe(f"No existe el biberón {bid}")
+            raise ErrorBebe("biberon_no_existe", id=bid)
         return _enriquecer(b, lim)
 
     def biberones_rango(self, desde: str, hasta: str, lim: Limites | float) -> list[dict[str, Any]]:
@@ -392,10 +397,10 @@ class BebeDB:
         if bid is None:
             vigentes = [b for b in disponibles if not b["caducado"]]
             if not (vigentes or disponibles):
-                raise ErrorBebe("No hay leche materna en reserva")
+                raise ErrorBebe("sin_reserva")
             bid = (vigentes or disponibles)[0]["id"]
         elif not any(b["id"] == bid for b in disponibles):
-            raise ErrorBebe(f"El biberón {bid} no está en reserva")
+            raise ErrorBebe("no_en_reserva", id=bid)
         ahora = ahora_iso()
         with self._con() as con:
             anterior = self._abierto(con)
@@ -414,7 +419,7 @@ class BebeDB:
                 (ubicacion, bid),
             )
             if not cur.rowcount:
-                raise ErrorBebe(f"El biberón {bid} no está en reserva")
+                raise ErrorBebe("no_en_reserva", id=bid)
             b = self._biberon(con, bid)
         return _enriquecer(b, lim)
 
@@ -426,7 +431,7 @@ class BebeDB:
                 (ahora_iso(), bid),
             )
             if not cur.rowcount:
-                raise ErrorBebe(f"El biberón {bid} no está en reserva")
+                raise ErrorBebe("no_en_reserva", id=bid)
             b = self._biberon(con, bid)
         return _enriquecer(b, lim)
 
@@ -434,7 +439,7 @@ class BebeDB:
                              duracion_min: float | None, nota: str | None, usuario: str | None,
                              biberones: list[float], ubicacion: str, lim: Limites) -> dict[str, Any]:
         if not (oz_izq or oz_der):
-            raise ErrorBebe("Indica las oz de al menos un lado")
+            raise ErrorBebe("falta_lado")
         with self._con() as con:
             eid = con.execute(
                 "INSERT INTO extracciones (fin, oz_izq, oz_der, duracion_min, nota, registrado_por, creado) "
@@ -494,11 +499,11 @@ class BebeDB:
             restante = b["oz"] - b["consumido"]
             if oz is None:
                 if oz_sobrantes is None:
-                    raise ErrorBebe("Indica cuántas oz tomó")
+                    raise ErrorBebe("falta_cuanto")
                 oz = restante - oz_sobrantes
             oz = _r(oz)
             if oz <= 0:
-                raise ErrorBebe("La cantidad tomada debe ser mayor a 0")
+                raise ErrorBebe("cantidad_positiva")
 
             en_b = _r(min(oz, restante))
             exceso = _r(oz - en_b)
@@ -577,7 +582,7 @@ class BebeDB:
         with self._con() as con:
             t = con.execute("SELECT * FROM tomas WHERE id = ? AND borrado = 0", (toma_id,)).fetchone()
             if not t:
-                raise ErrorBebe(f"No existe la toma {toma_id}")
+                raise ErrorBebe("toma_no_existe", id=toma_id)
             origen = self._biberon(con, t["biberon_id"]) if t["biberon_id"] else None
             if destino == "nuevo":
                 abierto = origen is not None and origen["cerrado"] is None
@@ -602,17 +607,14 @@ class BebeDB:
                     (t["biberon_id"] or 10**12,),
                 ).fetchone()
                 if not prev:
-                    raise ErrorBebe("No hay biberón anterior")
+                    raise ErrorBebe("sin_biberon_anterior")
                 destino_id = prev["id"]
                 d = self._biberon(con, destino_id)
                 if d["consumido"] + t["oz_tomadas"] > d["oz"] + EPS:
-                    raise ErrorBebe(
-                        f"El biberón anterior solo tiene {_r(d['oz'] - d['consumido'])} oz libres; "
-                        "ajusta su tamaño o la cantidad de la toma"
-                    )
+                    raise ErrorBebe("anterior_sin_espacio", libre=_r(d["oz"] - d["consumido"]))
                 con.execute("UPDATE tomas SET biberon_id = ? WHERE id = ?", (destino_id, toma_id))
             else:
-                raise ErrorBebe("destino debe ser 'nuevo' o 'anterior'")
+                raise ErrorBebe("destino_invalido")
             if origen:
                 resto = self._biberon(con, origen["id"])
                 if resto and resto["n_tomas"] == 0:
@@ -690,10 +692,10 @@ class BebeDB:
                     [cambios[c] for c in campos] + [ahora_iso(), pid],
                 )
                 if not cur.rowcount:
-                    raise ErrorBebe(f"No existe el pañal {pid}")
+                    raise ErrorBebe("panal_no_existe", id=pid)
             fila = con.execute("SELECT * FROM panales WHERE id = ? AND borrado = 0", (pid,)).fetchone()
         if not fila:
-            raise ErrorBebe(f"No existe el pañal {pid}")
+            raise ErrorBebe("panal_no_existe", id=pid)
         return dict(fila)
 
     def borrar_panal(self, pid: int) -> bool:

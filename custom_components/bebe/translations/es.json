@@ -800,5 +800,82 @@
         "description": "Cambia la popó habitual cuando cambie su alimentación o su edad."
       }
     }
+  },
+  "exceptions": {
+    "fecha_futura": {
+      "message": "'{campo}' está en el futuro: {valor}"
+    },
+    "no_cargada": {
+      "message": "La integración Baby Tracker no está cargada"
+    },
+    "varios_bebes": {
+      "message": "Hay varios bebés: indica cuál en el campo 'bebe' ({bebes})"
+    },
+    "bebe_no_encontrado": {
+      "message": "No encuentro al bebé '{bebe}'"
+    },
+    "falta_cantidad": {
+      "message": "Indica oz_tomadas, u oz_sobrantes (0 = se acabó lo que quedaba)"
+    },
+    "sin_tomas": {
+      "message": "No hay tomas registradas"
+    },
+    "toma_no_existe": {
+      "message": "No existe la toma {id}"
+    },
+    "falta_id_restaurar": {
+      "message": "Indica el 'id' de la toma a restaurar"
+    },
+    "toma_no_borrada": {
+      "message": "La toma {id} no está borrada"
+    },
+    "extraccion_no_existe": {
+      "message": "No existe la extracción {id}"
+    },
+    "panal_no_existe": {
+      "message": "No existe el pañal {id}"
+    },
+    "falta_medida": {
+      "message": "Indica al menos peso_kg, talla_cm o perimetro_cm"
+    },
+    "medida_no_existe": {
+      "message": "No existe la medida {id}"
+    },
+    "biberon_no_abierto": {
+      "message": "El biberón {id} no está abierto"
+    },
+    "sin_biberon_abierto": {
+      "message": "No hay biberón abierto"
+    },
+    "biberon_no_existe": {
+      "message": "No existe el biberón {id}"
+    },
+    "biberon_con_tomas": {
+      "message": "El biberón ya tiene tomas; bórralas primero"
+    },
+    "sin_reserva": {
+      "message": "No hay leche materna en reserva"
+    },
+    "no_en_reserva": {
+      "message": "El biberón {id} no está en reserva"
+    },
+    "falta_lado": {
+      "message": "Indica la cantidad de al menos un lado"
+    },
+    "falta_cuanto": {
+      "message": "Indica cuánto tomó"
+    },
+    "cantidad_positiva": {
+      "message": "La cantidad tomada debe ser mayor a 0"
+    },
+    "sin_biberon_anterior": {
+      "message": "No hay biberón anterior"
+    },
+    "anterior_sin_espacio": {
+      "message": "El biberón anterior solo tiene {libre} oz libres; ajusta su tamaño o la cantidad de la toma"
+    },
+    "destino_invalido": {
+      "message": "El destino debe ser 'nuevo' o 'anterior'"
+    }
   }
 }

@@ -162,6 +162,14 @@ ESQUEMA_MEDIDA = vol.Schema({
 })
 
 
+def _error(clave: str, **datos: Any) -> ServiceValidationError:
+    """Error para el usuario, traducido (sección "exceptions" de translations/*.json)."""
+    return ServiceValidationError(
+        translation_domain=DOMAIN, translation_key=clave,
+        translation_placeholders={k: str(v) for k, v in datos.items()},
+    )
+
+
 def _local(valor: datetime) -> datetime:
     """Horas sin zona se interpretan en la zona de HA."""
     return valor.replace(tzinfo=dt_util.get_default_time_zone()) if valor.tzinfo is None else valor
@@ -172,7 +180,7 @@ def _a_utc(valor: datetime | None, campo: str, futuro_ok: bool = False) -> str |
         return None
     valor = _local(valor)
     if not futuro_ok and valor > dt_util.utcnow() + timedelta(minutes=TOLERANCIA_FUTURO_MIN):
-        raise ServiceValidationError(f"'{campo}' está en el futuro: {valor.isoformat()}")
+        raise _error("fecha_futura", campo=campo, valor=valor.isoformat())
     return dt_util.as_utc(valor).isoformat(timespec="seconds")
 
 
@@ -186,21 +194,18 @@ def _entrada(hass: HomeAssistant, call: ServiceCall | None = None) -> ConfigEntr
     """Bebé al que va la llamada: campo "bebe" (id de la entrada o nombre); con un solo bebé es opcional."""
     bebes: dict[str, ConfigEntry] = hass.data.get(DOMAIN, {}).get("bebes", {})
     if not bebes:
-        raise ServiceValidationError("La integración Baby Tracker no está cargada")
+        raise _error("no_cargada")
     buscado = str(call.data.get("bebe", "")).strip() if call else ""
     if not buscado:
         if len(bebes) == 1:
             return next(iter(bebes.values()))
-        raise ServiceValidationError(
-            "Hay varios bebés: indica cuál en el campo 'bebe' ("
-            + ", ".join(e.data[CONF_NOMBRE] for e in bebes.values()) + ")"
-        )
+        raise _error("varios_bebes", bebes=", ".join(e.data[CONF_NOMBRE] for e in bebes.values()))
     if buscado in bebes:
         return bebes[buscado]
     for e in bebes.values():
         if e.data[CONF_NOMBRE].casefold() == buscado.casefold():
             return e
-    raise ServiceValidationError(f"No encuentro al bebé '{buscado}'")
+    raise _error("bebe_no_encontrado", bebe=buscado)
 
 
 def _runtime(hass: HomeAssistant, call: ServiceCall | None = None) -> BebeRuntime:
@@ -212,7 +217,7 @@ async def _db(hass: HomeAssistant, fn: Callable[..., Any], *args: Any, **kwargs:
     try:
         return await hass.async_add_executor_job(lambda: fn(*args, **kwargs))
     except ErrorBebe as err:
-        raise ServiceValidationError(str(err)) from err
+        raise _error(err.clave, **err.datos) from err
 
 
 async def _despues(hass: HomeAssistant, rt: BebeRuntime, accion: str, datos: dict[str, Any]) -> None:
@@ -227,7 +232,7 @@ async def _registrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResp
     rt = _runtime(hass, call)
     d = call.data
     if "oz_tomadas" not in d and "oz_sobrantes" not in d:
-        raise ServiceValidationError("Indica oz_tomadas, u oz_sobrantes (0 = se acabó lo que quedaba)")
+        raise _error("falta_cantidad")
     fin_dt = _local(d.get("fin") or dt_util.now())
     fin = _a_utc(fin_dt, "fin")
     en_vivo = abs(dt_util.utcnow() - fin_dt) <= timedelta(minutes=VENTANA_EN_VIVO_MIN)
@@ -249,7 +254,7 @@ async def _id_o_ultima(hass: HomeAssistant, rt: BebeRuntime, call: ServiceCall) 
         return call.data["id"]
     ultima = await _db(hass, rt.db.ultima_toma)
     if not ultima:
-        raise ServiceValidationError("No hay tomas registradas")
+        raise _error("sin_tomas")
     return ultima["id"]
 
 
@@ -257,7 +262,7 @@ async def _corregir_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceRespo
     rt = _runtime(hass, call)
     toma_id = await _id_o_ultima(hass, rt, call)
     if not await _db(hass, rt.db.obtener_toma, toma_id):
-        raise ServiceValidationError(f"No existe la toma {toma_id}")
+        raise _error("toma_no_existe", id=toma_id)
     cambios = {k: v for k, v in call.data.items() if k in ("oz_tomadas", "tipo", "confianza", "nota")}
     if "fin" in call.data:
         cambios["fin"] = _a_utc(call.data["fin"], "fin")
@@ -279,7 +284,7 @@ async def _borrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceRespons
     toma_id = await _id_o_ultima(hass, rt, call)
     toma = await _db(hass, rt.db.obtener_toma, toma_id)
     if not toma or not await _db(hass, rt.db.borrar_toma, toma_id):
-        raise ServiceValidationError(f"No existe la toma {toma_id}")
+        raise _error("toma_no_existe", id=toma_id)
     await _despues(hass, rt, "borrada", {"id": toma_id})
     return {"id": toma_id, "oz_tomadas": toma["oz_tomadas"], "fin": toma["fin"]}
 
@@ -287,9 +292,9 @@ async def _borrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceRespons
 async def _restaurar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
     if "id" not in call.data:
-        raise ServiceValidationError("Indica el 'id' de la toma a restaurar")
+        raise _error("falta_id_restaurar")
     if not await _db(hass, rt.db.restaurar_toma, call.data["id"]):
-        raise ServiceValidationError(f"La toma {call.data['id']} no está borrada")
+        raise _error("toma_no_borrada", id=call.data["id"])
     await _despues(hass, rt, "restaurada", {"id": call.data["id"]})
     return {"id": call.data["id"]}
 
@@ -383,7 +388,7 @@ async def _registrar_extraccion(hass: HomeAssistant, call: ServiceCall) -> Servi
 async def _borrar_extraccion(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
     if not await _db(hass, rt.db.borrar_extraccion, call.data["id"]):
-        raise ServiceValidationError(f"No existe la extracción {call.data['id']}")
+        raise _error("extraccion_no_existe", id=call.data["id"])
     await _despues(hass, rt, "extraccion", {"id": call.data["id"]})
     return {"id": call.data["id"]}
 
@@ -419,7 +424,7 @@ async def _corregir_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceResp
 async def _borrar_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
     if not await _db(hass, rt.db.borrar_panal, call.data["id"]):
-        raise ServiceValidationError(f"No existe el pañal {call.data['id']}")
+        raise _error("panal_no_existe", id=call.data["id"])
     await _despues(hass, rt, "panal", {"id": call.data["id"]})
     return {"id": call.data["id"]}
 
@@ -464,7 +469,7 @@ async def _registrar_medida(hass: HomeAssistant, call: ServiceCall) -> ServiceRe
     rt = _runtime(hass, call)
     d: dict[str, Any] = dict(call.data)
     if not any(k in d for k in ("peso_kg", "talla_cm", "perimetro_cm")):
-        raise ServiceValidationError("Indica al menos peso_kg, talla_cm o perimetro_cm")
+        raise _error("falta_medida")
     d["fecha"] = _a_utc(d.get("fecha") or dt_util.now(), "fecha")
     d["registrado_por"] = await _usuario(hass, call)
     medida_id = await _db(hass, rt.db.agregar_medida, d)
@@ -481,7 +486,7 @@ async def _listar_medidas(hass: HomeAssistant, call: ServiceCall) -> ServiceResp
 async def _borrar_medida(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
     if not await _db(hass, rt.db.borrar_medida, call.data["id"]):
-        raise ServiceValidationError(f"No existe la medida {call.data['id']}")
+        raise _error("medida_no_existe", id=call.data["id"])
     await rt.coordinator.async_refresh()
     return {"id": call.data["id"]}
 
