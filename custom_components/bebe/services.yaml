@@ -1,5 +1,9 @@
 registrar_toma:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     oz_tomadas:
       selector:
         number: {min: 0.25, max: 12, step: 0.25, unit_of_measurement: oz}
@@ -31,6 +35,10 @@ registrar_toma:
 
 corregir_toma:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
@@ -55,12 +63,20 @@ corregir_toma:
 
 borrar_toma:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
 restaurar_toma:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -68,6 +84,10 @@ restaurar_toma:
 
 nuevo_biberon:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     oz:
       selector:
         number: {min: 0.5, max: 12, step: 0.5, unit_of_measurement: oz}
@@ -77,12 +97,20 @@ nuevo_biberon:
 
 cerrar_biberon:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
 borrar_biberon:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -90,6 +118,10 @@ borrar_biberon:
 
 corregir_biberon:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -115,6 +147,10 @@ corregir_biberon:
 
 registrar_medida:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     fecha:
       selector:
         datetime:
@@ -133,6 +169,10 @@ registrar_medida:
 
 borrar_medida:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -140,6 +180,10 @@ borrar_medida:
 
 listar_tomas:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     desde:
       required: true
       selector:
@@ -154,6 +198,10 @@ listar_tomas:
 
 listar_biberones:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     desde:
       required: true
       selector:
@@ -164,9 +212,18 @@ listar_biberones:
         datetime:
 
 listar_medidas:
+  fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
 
 guardar_leche:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     oz:
       required: true
       selector:
@@ -183,6 +240,10 @@ guardar_leche:
 
 usar_reserva:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
@@ -192,6 +253,10 @@ usar_reserva:
 
 reanudar_biberon:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -199,6 +264,10 @@ reanudar_biberon:
 
 mover_reserva:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -210,6 +279,10 @@ mover_reserva:
 
 descartar_reserva:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -217,6 +290,10 @@ descartar_reserva:
 
 registrar_extraccion:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     fin:
       selector:
         datetime:
@@ -244,15 +321,28 @@ registrar_extraccion:
 
 borrar_extraccion:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
 listar_reservas:
+  fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
 
 listar_extracciones:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     desde:
       required: true
       selector:
@@ -264,6 +354,10 @@ listar_extracciones:
 
 registrar_panal:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     tipo:
       required: true
       selector:
@@ -286,6 +380,10 @@ registrar_panal:
 
 corregir_panal:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -308,6 +406,10 @@ corregir_panal:
 
 borrar_panal:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     id:
       required: true
       selector:
@@ -315,6 +417,10 @@ borrar_panal:
 
 listar_panales:
   fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
     desde:
       required: true
       selector:

@@ -21,6 +21,8 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_DB,
+    CONF_NOMBRE,
     COLOR_POPO_DEFAULT,
     CONF_COLOR_POPO,
     CONF_CONSISTENCIA_POPO,
@@ -48,7 +50,7 @@ from .const import (
 )
 from .coordinator import BebeCoordinator, BebeRuntime
 from .db import BebeDB, ErrorBebe
-from .panel import async_quitar_panel, async_registrar_panel
+from .panel import async_actualizar_panel
 
 PLATFORMS = [Platform.NUMBER, Platform.SENSOR]
 
@@ -180,18 +182,29 @@ async def _usuario(hass: HomeAssistant, call: ServiceCall) -> str | None:
     return None
 
 
-def _entrada(hass: HomeAssistant) -> ConfigEntry:
-    entries = hass.config_entries.async_loaded_entries(DOMAIN)
-    if not entries:
+def _entrada(hass: HomeAssistant, call: ServiceCall | None = None) -> ConfigEntry:
+    """Bebé al que va la llamada: campo "bebe" (id de la entrada o nombre); con un solo bebé es opcional."""
+    bebes: dict[str, ConfigEntry] = hass.data.get(DOMAIN, {}).get("bebes", {})
+    if not bebes:
         raise ServiceValidationError("La integración Baby Tracker no está cargada")
-    return entries[0]
+    buscado = str(call.data.get("bebe", "")).strip() if call else ""
+    if not buscado:
+        if len(bebes) == 1:
+            return next(iter(bebes.values()))
+        raise ServiceValidationError(
+            "Hay varios bebés: indica cuál en el campo 'bebe' ("
+            + ", ".join(e.data[CONF_NOMBRE] for e in bebes.values()) + ")"
+        )
+    if buscado in bebes:
+        return bebes[buscado]
+    for e in bebes.values():
+        if e.data[CONF_NOMBRE].casefold() == buscado.casefold():
+            return e
+    raise ServiceValidationError(f"No encuentro al bebé '{buscado}'")
 
 
-def _runtime(hass: HomeAssistant) -> BebeRuntime:
-    entries = hass.config_entries.async_loaded_entries(DOMAIN)
-    if not entries:
-        raise ServiceValidationError("La integración Bebé no está cargada")
-    return entries[0].runtime_data
+def _runtime(hass: HomeAssistant, call: ServiceCall | None = None) -> BebeRuntime:
+    return _entrada(hass, call).runtime_data
 
 
 async def _db(hass: HomeAssistant, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
@@ -204,12 +217,14 @@ async def _db(hass: HomeAssistant, fn: Callable[..., Any], *args: Any, **kwargs:
 
 async def _despues(hass: HomeAssistant, rt: BebeRuntime, accion: str, datos: dict[str, Any]) -> None:
     await rt.coordinator.async_refresh()
-    hass.bus.async_fire(EVENTO_TOMA, {"accion": accion, **datos})
+    entry = rt.coordinator.entry
+    hass.bus.async_fire(EVENTO_TOMA, {"accion": accion, "bebe": entry.entry_id,
+                                      "nombre": entry.data[CONF_NOMBRE], **datos})
 
 
 # ------------------------------------------------------------------ tomas
 async def _registrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     d = call.data
     if "oz_tomadas" not in d and "oz_sobrantes" not in d:
         raise ServiceValidationError("Indica oz_tomadas, u oz_sobrantes (0 = se acabó lo que quedaba)")
@@ -222,7 +237,7 @@ async def _registrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResp
         tipo=d.get("tipo"), fuente=d["fuente"], confianza=d["confianza"],
         usuario=await _usuario(hass, call), nota=d.get("nota"),
         nuevo_biberon=d["nuevo_biberon"], acumular_s=d["acumular_segundos"],
-        oz_default=rt.oz_default, lim=rt.limites, en_vivo=en_vivo,
+        oz_default=rt.oz_default, lim=rt.limites, en_vivo=en_vivo, tipo_biberon=rt.tipo_default,
     )
     await _despues(hass, rt, "registrada", {"id": r["id"], "biberon_id": r["biberon"]["id"],
                                             "biberon_nuevo": r["biberon_nuevo"]})
@@ -239,7 +254,7 @@ async def _id_o_ultima(hass: HomeAssistant, rt: BebeRuntime, call: ServiceCall) 
 
 
 async def _corregir_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     toma_id = await _id_o_ultima(hass, rt, call)
     if not await _db(hass, rt.db.obtener_toma, toma_id):
         raise ServiceValidationError(f"No existe la toma {toma_id}")
@@ -260,7 +275,7 @@ async def _corregir_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceRespo
 
 
 async def _borrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     toma_id = await _id_o_ultima(hass, rt, call)
     toma = await _db(hass, rt.db.obtener_toma, toma_id)
     if not toma or not await _db(hass, rt.db.borrar_toma, toma_id):
@@ -270,7 +285,7 @@ async def _borrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceRespons
 
 
 async def _restaurar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     if "id" not in call.data:
         raise ServiceValidationError("Indica el 'id' de la toma a restaurar")
     if not await _db(hass, rt.db.restaurar_toma, call.data["id"]):
@@ -281,7 +296,7 @@ async def _restaurar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResp
 
 # ------------------------------------------------------------------ biberones
 async def _nuevo_biberon(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     r = await _db(hass, rt.db.nuevo_biberon, call.data.get("oz", rt.oz_default),
                   call.data.get("tipo", rt.tipo_default), rt.limites)
     await _despues(hass, rt, "biberon_nuevo", {"biberon_id": r["biberon"]["id"]})
@@ -289,28 +304,28 @@ async def _nuevo_biberon(hass: HomeAssistant, call: ServiceCall) -> ServiceRespo
 
 
 async def _reanudar_biberon(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     r = await _db(hass, rt.db.reanudar_biberon, call.data["id"], rt.limites)
     await _despues(hass, rt, "biberon_reanudado", {"biberon_id": call.data["id"]})
     return r
 
 
 async def _cerrar_biberon(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     b = await _db(hass, rt.db.cerrar_biberon, call.data.get("id"), rt.limites)
     await _despues(hass, rt, "biberon_cerrado", {"biberon_id": b["id"]})
     return b
 
 
 async def _borrar_biberon(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     r = await _db(hass, rt.db.borrar_biberon, call.data["id"])
     await _despues(hass, rt, "biberon_borrado", {"biberon_id": call.data["id"]})
     return r
 
 
 async def _corregir_biberon(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     cambios = {k: v for k, v in call.data.items() if k != "id"}
     if "hecho" in cambios:
         cambios["hecho"] = _a_utc(cambios["hecho"], "hecho")
@@ -321,7 +336,7 @@ async def _corregir_biberon(hass: HomeAssistant, call: ServiceCall) -> ServiceRe
 
 # ------------------------------------------------------------------ leche materna
 async def _guardar_leche(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     hecho = _a_utc(call.data.get("hecho") or dt_util.now(), "hecho")
     b = await _db(hass, rt.db.guardar_leche, call.data["oz"], hecho, call.data["ubicacion"],
                   rt.limites, None, call.data.get("nota"))
@@ -330,28 +345,28 @@ async def _guardar_leche(hass: HomeAssistant, call: ServiceCall) -> ServiceRespo
 
 
 async def _usar_reserva(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     r = await _db(hass, rt.db.usar_reserva, call.data.get("id"), rt.limites, call.data["pausar_actual"])
     await _despues(hass, rt, "biberon_nuevo", {"biberon_id": r["biberon"]["id"]})
     return r
 
 
 async def _mover_reserva(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     b = await _db(hass, rt.db.mover_reserva, call.data["id"], call.data["ubicacion"], rt.limites)
     await _despues(hass, rt, "reserva", {"biberon_id": b["id"]})
     return b
 
 
 async def _descartar_reserva(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     b = await _db(hass, rt.db.descartar_reserva, call.data["id"], rt.limites)
     await _despues(hass, rt, "reserva", {"biberon_id": b["id"]})
     return b
 
 
 async def _registrar_extraccion(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     d = call.data
     total = (d.get("oz_izq") or 0) + (d.get("oz_der") or 0)
     biberones = d.get("biberones") or ([total] if total > 0 else [])
@@ -366,7 +381,7 @@ async def _registrar_extraccion(hass: HomeAssistant, call: ServiceCall) -> Servi
 
 
 async def _borrar_extraccion(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     if not await _db(hass, rt.db.borrar_extraccion, call.data["id"]):
         raise ServiceValidationError(f"No existe la extracción {call.data['id']}")
     await _despues(hass, rt, "extraccion", {"id": call.data["id"]})
@@ -375,14 +390,14 @@ async def _borrar_extraccion(hass: HomeAssistant, call: ServiceCall) -> ServiceR
 
 # ------------------------------------------------------------------ pañales
 async def _registrar_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     d: dict[str, Any] = dict(call.data)
     d["fin"] = _a_utc(d.get("fin") or dt_util.now(), "fin")
     if d["tipo"] == "pipi":  # color y consistencia solo aplican a la popó
         d.pop("color", None)
         d.pop("consistencia", None)
     else:  # si no se indican, se usa la popó "normal" configurada para el bebé
-        datos = _entrada(hass).data
+        datos = _entrada(hass, call).data
         d.setdefault("color", datos.get(CONF_COLOR_POPO, COLOR_POPO_DEFAULT))
         d.setdefault("consistencia", datos.get(CONF_CONSISTENCIA_POPO, CONSISTENCIA_POPO_DEFAULT))
     d["registrado_por"] = await _usuario(hass, call)
@@ -392,7 +407,7 @@ async def _registrar_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
 
 
 async def _corregir_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     cambios = {k: v for k, v in call.data.items() if k != "id"}
     if "fin" in cambios:
         cambios["fin"] = _a_utc(cambios["fin"], "fin")
@@ -402,7 +417,7 @@ async def _corregir_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceResp
 
 
 async def _borrar_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     if not await _db(hass, rt.db.borrar_panal, call.data["id"]):
         raise ServiceValidationError(f"No existe el pañal {call.data['id']}")
     await _despues(hass, rt, "panal", {"id": call.data["id"]})
@@ -410,7 +425,7 @@ async def _borrar_panal(hass: HomeAssistant, call: ServiceCall) -> ServiceRespon
 
 
 async def _listar_panales(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     desde, hasta = _rango(call)
     return {"panales": await _db(hass, rt.db.panales_rango, desde, hasta)}
 
@@ -422,31 +437,31 @@ def _rango(call: ServiceCall) -> tuple[str, str]:
 
 
 async def _listar_tomas(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     desde, hasta = _rango(call)
     return {"tomas": await _db(hass, rt.db.tomas_rango, desde, hasta, call.data["borradas"])}
 
 
 async def _listar_reservas(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     return {"reservas": await _db(hass, rt.db.reservas, rt.limites)}
 
 
 async def _listar_extracciones(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     desde, hasta = _rango(call)
     return {"extracciones": await _db(hass, rt.db.extracciones_rango, desde, hasta)}
 
 
 async def _listar_biberones(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     desde, hasta = _rango(call)
     return {"biberones": await _db(hass, rt.db.biberones_rango, desde, hasta, rt.limites)}
 
 
 # ------------------------------------------------------------------ medidas
 async def _registrar_medida(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     d: dict[str, Any] = dict(call.data)
     if not any(k in d for k in ("peso_kg", "talla_cm", "perimetro_cm")):
         raise ServiceValidationError("Indica al menos peso_kg, talla_cm o perimetro_cm")
@@ -454,17 +469,17 @@ async def _registrar_medida(hass: HomeAssistant, call: ServiceCall) -> ServiceRe
     d["registrado_por"] = await _usuario(hass, call)
     medida_id = await _db(hass, rt.db.agregar_medida, d)
     await rt.coordinator.async_refresh()
-    hass.bus.async_fire(EVENTO_MEDIDA, {"id": medida_id, **d})
+    hass.bus.async_fire(EVENTO_MEDIDA, {"id": medida_id, "bebe": rt.coordinator.entry.entry_id, **d})
     return {"id": medida_id}
 
 
 async def _listar_medidas(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     return {"medidas": await _db(hass, rt.db.medidas)}
 
 
 async def _borrar_medida(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
-    rt = _runtime(hass)
+    rt = _runtime(hass, call)
     if not await _db(hass, rt.db.borrar_medida, call.data["id"]):
         raise ServiceValidationError(f"No existe la medida {call.data['id']}")
     await rt.coordinator.async_refresh()
@@ -506,7 +521,8 @@ CONSULTAS: dict[str, tuple[Handler, vol.Schema]] = {
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    db = BebeDB(hass.config.path(DB_FILENAME))
+    # Cada bebé tiene su propia base; el primero (instalaciones de antes) usa bebe.db
+    db = BebeDB(hass.config.path(entry.data.get(CONF_DB, DB_FILENAME)))
     await hass.async_add_executor_job(db.inicializar, entry.data[CONF_OZ_DEFAULT], LIMITE_BIBERON_DEFAULT_H)
     coordinator = BebeCoordinator(hass, entry, db)
     entry.runtime_data = BebeRuntime(
@@ -524,20 +540,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    for grupo, soporte in ((SERVICIOS, SupportsResponse.OPTIONAL), (CONSULTAS, SupportsResponse.ONLY)):
-        for nombre, (fn, esquema) in grupo.items():
-            async def _handler(call: ServiceCall, fn: Handler = fn) -> ServiceResponse:
-                return await fn(hass, call)
-            hass.services.async_register(DOMAIN, nombre, _handler, schema=esquema, supports_response=soporte)
-
-    await async_registrar_panel(hass, entry)
+    bebes = hass.data.setdefault(DOMAIN, {}).setdefault("bebes", {})
+    bebes[entry.entry_id] = entry
+    # Las acciones son del dominio: se registran una vez para todos los bebés
+    if not hass.services.has_service(DOMAIN, "registrar_toma"):
+        for grupo, soporte in ((SERVICIOS, SupportsResponse.OPTIONAL), (CONSULTAS, SupportsResponse.ONLY)):
+            for nombre, (fn, esquema) in grupo.items():
+                async def _handler(call: ServiceCall, fn: Handler = fn) -> ServiceResponse:
+                    return await fn(hass, call)
+                hass.services.async_register(
+                    DOMAIN, nombre, _handler, schema=esquema.extend({vol.Optional("bebe"): cv.string}),
+                    supports_response=soporte,
+                )
+    await async_actualizar_panel(hass)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if ok:
-        async_quitar_panel(hass)
-        for nombre in list(hass.services.async_services_for_domain(DOMAIN)):
-            hass.services.async_remove(DOMAIN, nombre)
+        bebes = hass.data.get(DOMAIN, {}).get("bebes", {})
+        bebes.pop(entry.entry_id, None)
+        if not bebes:
+            for nombre in list(hass.services.async_services_for_domain(DOMAIN)):
+                hass.services.async_remove(DOMAIN, nombre)
+        await async_actualizar_panel(hass)
     return ok

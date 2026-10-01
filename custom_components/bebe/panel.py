@@ -1,4 +1,4 @@
-"""Panel "Bebé" en la barra lateral (web component servido desde www/)."""
+"""Panel "Baby Tracker" en la barra lateral: uno solo, con un selector cuando hay varios bebés."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 from homeassistant.components import frontend, panel_custom
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
@@ -37,20 +37,39 @@ def _version() -> str:
     return hashlib.md5((WWW / "bebe-panel.js").read_bytes()).hexdigest()[:8]
 
 
-async def async_registrar_panel(hass: HomeAssistant, entry: ConfigEntry) -> None:
+def _config_bebe(hass: HomeAssistant, entry: ConfigEntry) -> dict:
+    reg = er.async_get(hass)
+    d = entry.data
+    return {
+        "entry_id": entry.entry_id,
+        "nombre": d[CONF_NOMBRE],
+        "nacimiento": d[CONF_FECHA_NACIMIENTO],
+        "sexo": d.get(CONF_SEXO, "sin_especificar"),
+        "unidad": d.get(CONF_UNIDAD, "oz"),
+        "color_popo": d.get(CONF_COLOR_POPO, COLOR_POPO_DEFAULT),
+        "consistencia_popo": d.get(CONF_CONSISTENCIA_POPO, CONSISTENCIA_POPO_DEFAULT),
+        "entidades": {
+            clave: reg.async_get_entity_id(dominio, DOMAIN, f"{entry.entry_id}_{clave}")
+            for dominio, claves in CLAVES.items() for clave in claves
+        },
+    }
+
+
+async def async_actualizar_panel(hass: HomeAssistant) -> None:
+    """(Re)registra el panel con todos los bebés cargados; lo quita si no queda ninguno."""
     datos = hass.data.setdefault(DOMAIN, {})
+    bebes: dict[str, ConfigEntry] = datos.setdefault("bebes", {})
+    if URL_PANEL in hass.data.get(getattr(frontend, "DATA_PANELS", "frontend_panels"), {}):
+        frontend.async_remove_panel(hass, URL_PANEL)
+    if not bebes:
+        return
     if not datos.get("estatico"):
         await hass.http.async_register_static_paths(
             [StaticPathConfig(URL_ESTATICO, str(WWW), cache_headers=False)]
         )
         datos["estatico"] = True
-
-    reg = er.async_get(hass)
-    entidades = {
-        clave: reg.async_get_entity_id(dominio, DOMAIN, f"{entry.entry_id}_{clave}")
-        for dominio, claves in CLAVES.items() for clave in claves
-    }
     version = await hass.async_add_executor_job(_version)
+    lista = sorted((_config_bebe(hass, e) for e in bebes.values()), key=lambda b: b["nacimiento"])
     await panel_custom.async_register_panel(
         hass,
         webcomponent_name="bebe-panel",
@@ -59,18 +78,5 @@ async def async_registrar_panel(hass: HomeAssistant, entry: ConfigEntry) -> None
         sidebar_title=NOMBRE_PROYECTO,
         sidebar_icon="mdi:baby-bottle",
         require_admin=False,
-        config={
-            "nombre": entry.data[CONF_NOMBRE],
-            "nacimiento": entry.data[CONF_FECHA_NACIMIENTO],
-            "sexo": entry.data.get(CONF_SEXO, "sin_especificar"),
-            "unidad": entry.data.get(CONF_UNIDAD, "oz"),
-            "color_popo": entry.data.get(CONF_COLOR_POPO, COLOR_POPO_DEFAULT),
-            "consistencia_popo": entry.data.get(CONF_CONSISTENCIA_POPO, CONSISTENCIA_POPO_DEFAULT),
-            "entidades": entidades,
-        },
+        config={"proyecto": NOMBRE_PROYECTO, "bebes": lista},
     )
-
-
-@callback
-def async_quitar_panel(hass: HomeAssistant) -> None:
-    frontend.async_remove_panel(hass, URL_PANEL)

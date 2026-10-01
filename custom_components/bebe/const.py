@@ -2,6 +2,8 @@
 
 DOMAIN = "bebe"
 DB_FILENAME = "bebe.db"
+# Archivo de base de datos de cada bebé (una entrada por bebé); el primero usa bebe.db
+CONF_DB = "db"
 
 CONF_NOMBRE = "nombre"
 CONF_FECHA_NACIMIENTO = "fecha_nacimiento"

@@ -258,6 +258,10 @@
         "nota": {
           "name": "Nota",
           "description": "Texto libre."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -292,6 +296,10 @@
         "mover": {
           "name": "Mover",
           "description": "'nuevo': esta toma y las siguientes pasan a un biberón nuevo; 'anterior': se une al biberón anterior."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -302,6 +310,10 @@
         "id": {
           "name": "ID",
           "description": "ID de la toma (por defecto la última)."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -312,6 +324,10 @@
         "id": {
           "name": "ID",
           "description": "ID de la toma borrada."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -338,6 +354,10 @@
         "nota": {
           "name": "Nota",
           "description": "Texto libre."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -348,6 +368,10 @@
         "id": {
           "name": "ID",
           "description": "ID de la medida."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -366,12 +390,22 @@
         "borradas": {
           "name": "Incluir borradas",
           "description": "Incluir tomas borradas."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
     "listar_medidas": {
       "name": "Listar medidas",
-      "description": "Devuelve todas las medidas registradas."
+      "description": "Devuelve todas las medidas registradas.",
+      "fields": {
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
+        }
+      }
     },
     "nuevo_biberon": {
       "name": "Nuevo biberón",
@@ -384,6 +418,10 @@
         "tipo": {
           "name": "Tipo",
           "description": "Fórmula, materna o mixta."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -394,6 +432,10 @@
         "id": {
           "name": "ID",
           "description": "ID del biberón."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -404,6 +446,10 @@
         "id": {
           "name": "ID",
           "description": "ID del biberón."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -438,6 +484,10 @@
         "ubicacion": {
           "name": "Dónde se guarda",
           "description": "Refrigerador o temperatura ambiente."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -452,6 +502,10 @@
         "hasta": {
           "name": "Hasta",
           "description": "Fin del rango (exclusivo)."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -474,6 +528,10 @@
         "nota": {
           "name": "Nota",
           "description": "Texto libre."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -488,6 +546,10 @@
         "pausar_actual": {
           "name": "Pausar el biberón en curso",
           "description": "Sí: el biberón en curso queda en pausa para continuarlo después. No: se tira lo que queda."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -502,6 +564,10 @@
         "ubicacion": {
           "name": "Dónde",
           "description": "Refrigerador o temperatura ambiente."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -512,6 +578,10 @@
         "id": {
           "name": "ID",
           "description": "Biberón de la reserva."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -550,6 +620,10 @@
         "nota": {
           "name": "Nota",
           "description": "Texto libre."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -560,12 +634,22 @@
         "id": {
           "name": "ID",
           "description": "ID de la extracción."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
     "listar_reservas": {
       "name": "Listar reserva",
-      "description": "Devuelve los biberones de leche materna en reserva."
+      "description": "Devuelve los biberones de leche materna en reserva.",
+      "fields": {
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
+        }
+      }
     },
     "listar_extracciones": {
       "name": "Listar extracciones",
@@ -578,6 +662,10 @@
         "hasta": {
           "name": "Hasta",
           "description": "Fin del rango (exclusivo)."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -588,6 +676,10 @@
         "id": {
           "name": "ID",
           "description": "Biberón en pausa."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -618,6 +710,10 @@
         "fuente": {
           "name": "Fuente",
           "description": "boton, app, alexa…"
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -648,6 +744,10 @@
         "nota": {
           "name": "Nota",
           "description": "Texto libre."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -658,6 +758,10 @@
         "id": {
           "name": "ID",
           "description": "ID del pañal."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     },
@@ -672,6 +776,10 @@
         "hasta": {
           "name": "Hasta",
           "description": "Fin (exclusivo)."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
     }

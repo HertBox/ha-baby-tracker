@@ -133,7 +133,29 @@ class BebePanel extends HTMLElement {
     this._listo = false;
   }
 
-  set panel(p) { this._cfg = p.config; UNIDAD = p.config.unidad === "ml" ? "ml" : "oz"; }
+  set panel(p) {
+    // Un panel para todos los bebés; se recuerda el último elegido en este dispositivo
+    this._bebes = p.config.bebes || [p.config];
+    let sel = null;
+    try { sel = localStorage.getItem("baby_tracker_bebe"); } catch (e) { /* sin almacenamiento */ }
+    this._elegirBebe(this._bebes.find((b) => b.entry_id === sel) || this._bebes[0], false);
+  }
+
+  _elegirBebe(b, repintar = true) {
+    this._cfg = b;
+    UNIDAD = b.unidad === "ml" ? "ml" : "oz";
+    try { localStorage.setItem("baby_tracker_bebe", b.entry_id); } catch (e) { /* sin almacenamiento */ }
+    if (repintar && this._listo) {
+      const n = this.shadowRoot.getElementById("titulo-nombre"); if (n) n.textContent = b.nombre;
+      this.shadowRoot.querySelectorAll("#selector-bebe button").forEach((x) => x.classList.toggle("activa", x.dataset.bebe === b.entry_id));
+      this._actualizarEdad();
+      this._pintar();
+    }
+  }
+
+  _actualizarEdad() {
+    this._actualizarEdad();
+  }
   set narrow(n) { this._narrow = n; if (this._menu) this._menu.narrow = n; }
   set hass(h) {
     this._hass = h;
@@ -159,7 +181,7 @@ class BebePanel extends HTMLElement {
   async _servicio(servicio, datos, respuesta = false) {
     const r = await this._hass.callWS({
       type: "call_service", domain: "bebe", service: servicio,
-      service_data: datos, return_response: respuesta,
+      service_data: { ...datos, ...(this._cfg.entry_id ? { bebe: this._cfg.entry_id } : {}) }, return_response: respuesta,
     });
     return respuesta ? r.response : r;
   }
@@ -180,6 +202,8 @@ class BebePanel extends HTMLElement {
         <span id="menu"></span>
         <div class="titulo"><span id="titulo-nombre">${esc(this._cfg.nombre)}</span> <span class="titulo-edad" id="titulo-edad"></span></div>
       </div>
+      ${this._bebes.length > 1 ? `<div class="selector-bebe" id="selector-bebe">${this._bebes.map((b) =>
+        `<button data-bebe="${b.entry_id}" class="${b.entry_id === this._cfg.entry_id ? "activa" : ""}">${esc(b.nombre)}</button>`).join("")}</div>` : ""}
       <nav class="tabs">
         ${[["hoy", "Hoy"], ["tomas", "Tomas"], ["materna", "Materna"], ["medidas", "Medidas"], ["graficas", "Gráficas"], ["ajustes", "Ajustes"]]
           .map(([k, t]) => `<button data-tab="${k}" class="${k === this._tab ? "activa" : ""}">${t}</button>`).join("")}
@@ -189,6 +213,11 @@ class BebePanel extends HTMLElement {
     this._menu = document.createElement("ha-menu-button");
     this._menu.hass = this._hass; this._menu.narrow = this._narrow;
     this.shadowRoot.getElementById("menu").appendChild(this._menu);
+    const selector = this.shadowRoot.getElementById("selector-bebe");
+    if (selector) selector.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-bebe]"); if (!b) return;
+      this._elegirBebe(this._bebes.find((x) => x.entry_id === b.dataset.bebe));
+    });
     this.shadowRoot.querySelector(".tabs").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-tab]"); if (!b) return;
       this._tab = b.dataset.tab;
@@ -1120,6 +1149,9 @@ const ESTILOS = `
   color:var(--app-header-text-color, #fff); position:sticky; top:0; z-index:3; }
 .titulo { font-size:20px; margin-left:8px; }
 .titulo-edad { font-size:14px; opacity:.85; }
+.selector-bebe { display:flex; gap:6px; padding:6px 12px 8px; background:var(--app-header-background-color, var(--primary-color)); overflow-x:auto; }
+.selector-bebe button { border:1px solid rgba(255,255,255,.5); background:none; color:var(--app-header-text-color, #fff); border-radius:16px; padding:5px 14px; font-size:14px; white-space:nowrap; }
+.selector-bebe button.activa { background:var(--app-header-text-color, #fff); color:var(--app-header-background-color, var(--primary-color)); font-weight:600; }
 .tabs { display:flex; background:var(--app-header-background-color, var(--primary-color)); position:sticky; top:56px; z-index:3; }
 .tabs button { flex:1; background:none; border:0; color:var(--app-header-text-color, #fff); opacity:.7; padding:12px 1px;
   font-size:12px; border-bottom:3px solid transparent; cursor:pointer; }

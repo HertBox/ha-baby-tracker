@@ -174,6 +174,7 @@ class BebeDB:
 
     # ------------------------------------------------------------ esquema
     def inicializar(self, oz_biberon: float = 3.0, limite_h: float = 1.5) -> None:
+        self._copia_antes_de_migrar()
         with self._con() as con:
             con.executescript(ESQUEMA)
             columnas = {r["name"] for r in con.execute("PRAGMA table_info(tomas)")}
@@ -194,6 +195,21 @@ class BebeDB:
                 con.execute("UPDATE biberones SET activado = preparado WHERE activado IS NULL")
             if version < VERSION_ESQUEMA:
                 con.execute(f"PRAGMA user_version = {VERSION_ESQUEMA}")
+
+    def _copia_antes_de_migrar(self) -> None:
+        """Si la base existe y su esquema es anterior, guarda una copia antes de migrarla."""
+        import os
+        if not os.path.exists(self.path):
+            return
+        con = sqlite3.connect(self.path)
+        try:
+            version = con.execute("PRAGMA user_version").fetchone()[0]
+            if 0 < version < VERSION_ESQUEMA:
+                destino = sqlite3.connect(f"{self.path}.antes-v{VERSION_ESQUEMA}")
+                con.backup(destino)
+                destino.close()
+        finally:
+            con.close()
 
     def _agrupar_tomas_viejas(self, con: sqlite3.Connection, oz: float, limite_h: float) -> None:
         """Agrupa tomas sin biberón como continuaciones, con máximo `oz` por biberón."""
@@ -450,6 +466,7 @@ class BebeDB:
         self, *, fin: str, oz: float | None, tipo: str | None, fuente: str, confianza: str,
         usuario: str | None, nota: str | None, nuevo_biberon: bool, oz_sobrantes: float | None,
         acumular_s: int, oz_default: float, lim: Limites | float, en_vivo: bool,
+        tipo_biberon: str = "formula",
     ) -> dict[str, Any]:
         """Registra oz tomadas en el biberón que corresponda.
 
@@ -470,7 +487,8 @@ class BebeDB:
                     "SELECT id FROM biberones WHERE borrado = 0 AND en_reserva = 0 ORDER BY id DESC LIMIT 1"
                 ).fetchone()
                 anterior = self._biberon(con, ult["id"]) if ult else None
-                b = self._crear(con, oz_default, tipo or "formula", fin)
+                # Un biberón nuevo es del tipo indicado o, si no, del tipo de leche principal del bebé
+                b = self._crear(con, oz_default, tipo or tipo_biberon, fin)
                 creado = True
 
             restante = b["oz"] - b["consumido"]
@@ -491,13 +509,13 @@ class BebeDB:
             while exceso > 0:
                 anterior = self._biberon(con, b["id"])
                 # El exceso sigue en un biberón en pausa (p. ej. la fórmula tras la materna);
-                # si no hay, en uno nuevo de fórmula
+                # si no hay, en uno nuevo del tipo de leche principal del bebé
                 siguiente = next((x for x in self._abiertos(con) if x["id"] != b["id"]), None)
                 if siguiente:
                     b = siguiente
                     con.execute("UPDATE biberones SET activado = ? WHERE id = ?", (fin, b["id"]))
                 else:
-                    b = self._crear(con, max(oz_default, exceso), "formula", fin)
+                    b = self._crear(con, max(oz_default, exceso), tipo_biberon, fin)
                     biberon_nuevo = True
                 parte = _r(min(exceso, b["oz"] - b["consumido"]))
                 toma_id = self._sumar_toma(con, b["id"], parte, fin, b["tipo"], fuente, confianza,

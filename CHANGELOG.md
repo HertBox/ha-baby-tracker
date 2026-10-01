@@ -4,8 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones menores.
 
 ## [0.4.0] - sin publicar
+### Agregado
+- Varios bebés por instalación: una entrada por bebé, cada uno con su base de datos, sensores y ajustes.
+  Las acciones aceptan el campo `bebe` (id de la entrada o nombre); con un solo bebé es opcional.
+  El panel muestra un selector cuando hay más de un bebé (recuerda el último elegido en cada dispositivo).
+- Copia automática de la base antes de cada migración de esquema (`<base>.antes-vN`).
+- Los biberones creados automáticamente usan el tipo de leche principal del bebé.
+### Compatibilidad
+- Instalaciones existentes siguen usando `bebe.db`; sus entidades, acciones y automatizaciones no cambian.
 ### Planeado
-- Varios bebés por instalación (una entrada por bebé).
 - Traducción completa al inglés.
 - Blueprints para botón, recordatorio, leche materna y voz.
 

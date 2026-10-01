@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+import uuid
 
 import voluptuous as vol
 
@@ -11,6 +12,8 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_DB,
+    DB_FILENAME,
     COLOR_POPO_DEFAULT,
     COLORES_POPO,
     CONF_COLOR_POPO,
@@ -57,10 +60,11 @@ class BebeConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        if self._async_current_entries():
-            return self.async_abort(reason="single_instance_allowed")
         if user_input is not None:
-            return self.async_create_entry(title=user_input[CONF_NOMBRE], data=user_input)
+            # Una base por bebé: el primero usa bebe.db (compatible con instalaciones previas)
+            usados = {e.data.get(CONF_DB, DB_FILENAME) for e in self._async_current_entries()}
+            db = DB_FILENAME if DB_FILENAME not in usados else f"bebe_{uuid.uuid4().hex[:8]}.db"
+            return self.async_create_entry(title=user_input[CONF_NOMBRE], data={**user_input, CONF_DB: db})
         esquema = vol.Schema({
             **_esquema_bebe({}),
             vol.Required(CONF_OZ_DEFAULT, default=3.0): selector.NumberSelector(
