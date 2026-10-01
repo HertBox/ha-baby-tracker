@@ -21,8 +21,9 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
 
 - **Bottles + incremental feedings** — every feeding adds to the current bottle; start a new bottle only when you prepare one.
   Overflow automatically goes to the next bottle. Edit the size of the current bottle for special cases.
-- **Breast milk** — log pumping sessions (left/right), keep a **stash** (fridge / room temperature) with expiry,
-  use the oldest first, pause the formula bottle while giving breast milk and resume it later.
+- **Breast milk** — log pumping sessions (left/right), keep a **stash** (fridge / room temperature) with expiry;
+  choose which stash bottle to use (soonest to expire first) and it is deducted from the stash; pause the formula bottle
+  while giving breast milk and resume it later.
 - **Diapers** — pee, poop or both; color and consistency for poop with your baby's "usual" preselected.
 - **Today at a glance** — last and next feeding (big), current bottle, diapers, daily goal progress, rate per hour.
 - **Charts** by day, week or month: amount per day (formula vs breast milk), feedings, amount per feeding, bottles,
@@ -124,6 +125,7 @@ Before any database upgrade a copy is saved as `<file>.antes-vN`. Removing a bab
 ## Limitations
 
 - Charts are simple SVG; growth percentiles (WHO curves) are planned.
+- Breast milk logged by voice (or by an action without `reserva_id`) is not taken from the stash; use the panel for that.
 - The REST API shows validation errors as HTTP 500 (a Home Assistant behavior); the panel and automations show the proper message.
 
 ## Contributing

@@ -23,8 +23,8 @@ asistente de voz. Todo se guarda **localmente** en tu Home Assistant (SQLite): s
 
 - **Biberones + tomas incrementales**: cada toma suma al biberón en curso; el biberón nuevo solo cuando preparas uno.
   Lo que sobrepasa va solo al siguiente. Puedes editar el tamaño del biberón en curso para casos especiales.
-- **Leche materna**: extracciones (izquierdo/derecho), **reserva** (refrigerador / ambiente) con caducidad, usar primero
-  la más antigua, pausar la fórmula mientras das materna y continuarla después.
+- **Leche materna**: extracciones (izquierdo/derecho), **reserva** (refrigerador / ambiente) con caducidad; eliges qué
+  biberón de la reserva usar (primero el que caduca antes) y se descuenta; pausar la fórmula mientras das materna y continuarla después.
 - **Pañales**: pipí, popó o ambos; color y consistencia de la popó con la "habitual" de tu bebé ya marcada.
 - **Hoy de un vistazo**: última y siguiente toma (grandes), biberón en curso, pañales, avance de la meta, ritmo por hora.
 - **Gráficas** por día, semana o mes: cantidad por día (fórmula vs materna), tomas, cantidad por toma, biberones,
@@ -99,6 +99,12 @@ Ver la tabla completa en el [README en inglés](README.md#actions-services). Cad
 
 Los datos de cada bebé están en `config/bebe.db` (bebés adicionales: `config/bebe_<id>.db`) y entran en los respaldos
 de Home Assistant. Antes de actualizar la base se guarda una copia `<archivo>.antes-vN`. Al quitar un bebé su archivo se conserva.
+
+## Limitaciones
+
+- Gráficas sencillas en SVG; los percentiles de crecimiento (curvas OMS) están planeados.
+- La leche materna registrada por voz (o con una acción sin `reserva_id`) no se toma de la reserva; para eso usa el panel.
+- La API REST muestra los errores de validación como HTTP 500 (comportamiento de Home Assistant); el panel y las automatizaciones muestran el mensaje correcto.
 
 ## Licencia
 

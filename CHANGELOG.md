@@ -3,7 +3,10 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico (MAYOR.MENOR.PARCHE).
 Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones menores.
 
-## [0.5.0] - sin publicar
+## [1.0.0] - 2026-10-01
+Primera versión pública. Incluye todo lo de 0.4.0 y 0.5.0 (abajo).
+
+## [0.5.0] - 2026-10-01
 ### Agregado
 - Leche materna desde la reserva: "＋ Materna" en Hoy pregunta qué biberón de la reserva usar (primero el que caduca antes)
   cuando hay más de uno. Al registrar una toma de materna con biberón nuevo, o al cambiar un biberón a materna, el panel
@@ -15,7 +18,7 @@ Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones 
 ### Corregido
 - Un biberón de materna creado a mano no descontaba la reserva (la leche quedaba ahí y luego contaba como desechada).
 
-## [0.4.0] - sin publicar
+## [0.4.0] - 2026-10-01
 ### Agregado
 - Varios bebés por instalación: una entrada por bebé, cada uno con su base de datos, sensores y ajustes.
   Las acciones aceptan el campo `bebe` (id de la entrada o nombre); con un solo bebé es opcional.
