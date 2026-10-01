@@ -253,6 +253,10 @@ async def async_setup_entry(
     async_add_entities(BebeSensor(coordinator, entry, desc) for desc in SENSORES)
 
 
+# Sensores que llevan bebe_id / nombre / unidad (los que usan los blueprints)
+CON_DATOS_BEBE = {"ultima_toma", "proxima_toma", "reserva_oz", "reserva_caduca", "biberon_restante", "ultimo_panal"}
+
+
 class BebeSensor(CoordinatorEntity[BebeCoordinator], SensorEntity):
     _attr_has_entity_name = True
     # La serie diaria es grande y ya vive en bebe.db; no duplicarla en el historial de HA
@@ -265,6 +269,7 @@ class BebeSensor(CoordinatorEntity[BebeCoordinator], SensorEntity):
         self.entity_description = desc
         self._attr_unique_id = f"{entry.entry_id}_{desc.key}"
         self._attr_device_info = device_info(entry)
+        self._entry_id = entry.entry_id
 
     @property
     def native_value(self) -> Any:
@@ -272,6 +277,9 @@ class BebeSensor(CoordinatorEntity[BebeCoordinator], SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        if self.entity_description.atributos is None:
-            return None
-        return self.entity_description.atributos(self.coordinator.data)
+        attrs = dict(self.entity_description.atributos(self.coordinator.data)) if self.entity_description.atributos else {}
+        if self.entity_description.key in CON_DATOS_BEBE:
+            # Para blueprints: de qué bebé es el sensor y en qué unidad mostrar cantidades
+            d = self.coordinator.data
+            attrs.update({"bebe_id": self._entry_id, "nombre": d["nombre"], "unidad": d["unidad"]})
+        return attrs or None

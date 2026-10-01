@@ -1,0 +1,91 @@
+blueprint:
+  name: "Baby Tracker – breast milk about to expire"
+  description: >-
+    Before the soonest breast milk stash bottle expires, sends a notification with "Use now",
+    "Move to fridge" (if at room temperature) and "Discard". Requires "Baby Tracker – notification buttons".
+  domain: automation
+  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/bebe/leche_por_caducar.yaml
+  input:
+    reserva:
+      name: "Breast milk stash sensor"
+      description: "The baby's \"Breast milk stash\" sensor."
+      selector:
+        entity:
+          filter:
+            - integration: bebe
+              domain: sensor
+    caduca:
+      name: "Stash next expiry sensor"
+      selector:
+        entity:
+          filter:
+            - integration: bebe
+              domain: sensor
+              device_class: timestamp
+    anticipacion:
+      name: "How long before (negative offset)"
+      description: "Format -HH:MM:SS, e.g. -01:00:00 for one hour before."
+      default: "-01:00:00"
+      selector:
+        text: {}
+    celulares:
+      name: Phones to notify
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+    idioma:
+      name: Notification language
+      default: en
+      selector:
+        select:
+          options:
+            - {label: English, value: en}
+            - {label: Español, value: es}
+
+mode: single
+
+triggers:
+  - trigger: time
+    at:
+      entity_id: !input caduca
+      offset: !input anticipacion
+
+variables:
+  reserva: !input reserva
+  idioma: !input idioma
+  es: "{{ idioma == 'es' }}"
+  celulares: !input celulares
+  servicios: >-
+    {{ celulares | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+  bebe: "{{ state_attr(reserva, 'bebe_id') or '' }}"
+  u: "{{ state_attr(reserva, 'unidad') or 'oz' }}"
+  b: >-
+    {{ (state_attr(reserva, 'biberones') or []) | selectattr('caducado', 'false') | selectattr('caduca')
+       | sort(attribute='caduca') | first | default({}) }}
+
+conditions:
+  - condition: template
+    value_template: "{{ b != {} }}"
+
+actions:
+  - repeat:
+      for_each: "{{ servicios }}"
+      sequence:
+        - action: "{{ repeat.item }}"
+          continue_on_error: true
+          data:
+            title: "🍼 {{ 'Leche materna por caducar' if es else 'Breast milk about to expire' }}"
+            message: >-
+              {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+              {{ c(b.oz) }} ({{ ('refrigerador' if es else 'fridge') if b.ubicacion == 'refrigerador' else ('temperatura ambiente' if es else 'room temperature') }})
+              · {{ 'caduca a las' if es else 'expires at' }} {{ as_timestamp(b.caduca) | timestamp_custom('%H:%M') }}
+            data:
+              tag: "bebe_reserva_{{ b.id }}"
+              push:
+                interruption-level: time-sensitive
+              actions: >-
+                {{ [{'action': 'BEBE_USARRES_' ~ b.id ~ '__' ~ bebe, 'title': 'Usar ahora' if es else 'Use now'}]
+                   + ([{'action': 'BEBE_REFRI_' ~ b.id ~ '__' ~ bebe, 'title': 'Pasar al refri' if es else 'Move to fridge'}] if b.ubicacion == 'ambiente' else [])
+                   + [{'action': 'BEBE_DESCARTAR_' ~ b.id ~ '__' ~ bebe, 'title': 'Desechar' if es else 'Discard'}] }}

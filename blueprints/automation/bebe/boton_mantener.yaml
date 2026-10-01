@@ -1,0 +1,75 @@
+blueprint:
+  name: "Baby Tracker – button hold starts a new bottle"
+  description: >-
+    A long press (or any trigger you choose) starts a new bottle of the usual size; the previous one is left
+    incomplete and its remainder counts as wasted. Sends a notification with an Undo button
+    (requires "Baby Tracker – notification buttons").
+  domain: automation
+  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/bebe/boton_mantener.yaml
+  input:
+    disparador:
+      name: Hold trigger
+      description: "The trigger for a long press of your button."
+      selector:
+        trigger: {}
+    bebe:
+      name: Baby
+      description: Only needed if you track more than one baby.
+      default: ""
+      selector:
+        config_entry:
+          integration: bebe
+    celulares:
+      name: Phones to notify
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+    idioma:
+      name: Notification language
+      default: en
+      selector:
+        select:
+          options:
+            - {label: English, value: en}
+            - {label: Español, value: es}
+
+mode: single
+max_exceeded: silent
+
+triggers: !input disparador
+
+variables:
+  bebe: !input bebe
+  idioma: !input idioma
+  es: "{{ idioma == 'es' }}"
+  celulares: !input celulares
+  servicios: >-
+    {{ celulares | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+
+actions:
+  - action: bebe.nuevo_biberon
+    data:
+      bebe: "{{ bebe }}"
+    response_variable: r
+  - variables:
+      u: "{{ r.unidad }}"
+  - repeat:
+      for_each: "{{ servicios }}"
+      sequence:
+        - action: "{{ repeat.item }}"
+          continue_on_error: true
+          data:
+            title: >-
+              {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+              🍼 {{ 'Nuevo biberón' if es else 'New bottle' }} · {{ r.nombre }} ({{ c(r.biberon.oz) }})
+            message: >-
+              {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+              {% set a = r.anterior if r.anterior is mapping else {} %}
+              {%- if a -%}{{ 'Anterior' if es else 'Previous' }}: {{ c(a.consumido) }} / {{ c(a.oz) }}{%- if a.estado == 'incompleto' %} ({{ 'se desechan' if es else 'wasted' }} {{ c(a.restante) }}){% endif %}{%- else -%}{{ 'Listo.' if es else 'Ready.' }}{%- endif -%}
+            data:
+              tag: "bebe_biberon_{{ r.bebe }}"
+              actions:
+                - action: "BEBE_DESHACERBIB_{{ r.biberon.id }}__{{ r.bebe }}"
+                  title: "{{ 'Deshacer' if es else 'Undo' }}"

@@ -12,12 +12,14 @@ Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones 
 - Los biberones creados automáticamente usan el tipo de leche principal del bebé.
 - Inglés: integración (formularios, sensores, acciones) y panel completo; el panel usa el idioma del usuario de Home Assistant.
 - Mensajes de error traducibles (sección `exceptions` en `translations/*.json`).
+- Blueprints (inglés/español): botón – toque suma al biberón; botón – mantener = biberón nuevo; recordatorio de toma con respuesta
+  desde la notificación; leche materna por caducar; botones de las notificaciones (deshacer, corregir, mover, respuestas);
+  voz vía lista de tareas + IA (opcional). Funcionan con varios bebés y con oz o ml.
+- Las respuestas de las acciones incluyen `bebe`, `nombre` y `unidad`; los sensores principales exponen `bebe_id`, `nombre` y `unidad`.
 ### Corregido
 - El encabezado del panel podía trabarse al cambiar de bebé (recursión al actualizar la edad).
 ### Compatibilidad
 - Instalaciones existentes siguen usando `bebe.db`; sus entidades, acciones y automatizaciones no cambian.
-### Planeado
-- Blueprints para botón, recordatorio, leche materna y voz.
 
 ## [0.3.0] - 2026-09-30
 ### Agregado

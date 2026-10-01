@@ -1,0 +1,121 @@
+blueprint:
+  name: "Baby Tracker – button press adds to the bottle"
+  description: >-
+    Each press adds an amount to the current bottle (always a continuation). Presses closer together than
+    the window count as a single feeding. If a press goes past the bottle size, the rest starts a new bottle.
+    Sends a notification when a new bottle starts and a single summary after the last press.
+
+    Pair it with "Baby Tracker – notification buttons" so Undo / Edit buttons work.
+  domain: automation
+  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/bebe/boton_toque.yaml
+  input:
+    disparador:
+      name: Press trigger
+      description: "The trigger for one press of your button (e.g. a ZHA or Zigbee2MQTT button event)."
+      selector:
+        trigger: {}
+    bebe:
+      name: Baby
+      description: Only needed if you track more than one baby.
+      default: ""
+      selector:
+        config_entry:
+          integration: bebe
+    cantidad:
+      name: Amount per press (oz)
+      default: 0.5
+      selector:
+        number: {min: 0.25, max: 2, step: 0.25, unit_of_measurement: oz}
+    ventana:
+      name: Window between presses (seconds)
+      description: Presses within this time are one feeding; the summary is sent this long after the last press.
+      default: 60
+      selector:
+        number: {min: 10, max: 300, unit_of_measurement: s}
+    celulares:
+      name: Phones to notify
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+    idioma:
+      name: Notification language
+      default: en
+      selector:
+        select:
+          options:
+            - {label: English, value: en}
+            - {label: Español, value: es}
+
+mode: restart
+max_exceeded: silent
+
+triggers: !input disparador
+
+variables:
+  bebe: !input bebe
+  ventana: !input ventana
+  idioma: !input idioma
+  es: "{{ idioma == 'es' }}"
+  celulares: !input celulares
+  servicios: >-
+    {{ celulares | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+
+actions:
+  - action: bebe.registrar_toma
+    data:
+      oz_tomadas: !input cantidad
+      fuente: boton
+      acumular_segundos: !input ventana
+      bebe: "{{ bebe }}"
+    response_variable: r
+  - variables:
+      u: "{{ r.unidad }}"
+      b: "{{ r.biberon }}"
+      sufijo: "{{ '__' ~ r.bebe }}"
+  # Biberón nuevo: aviso inmediato
+  - if: "{{ r.biberon_nuevo }}"
+    then:
+      - repeat:
+          for_each: "{{ servicios }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              continue_on_error: true
+              data:
+                title: >-
+                  {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                  🍼 {{ ('Nuevo biberón' if es else 'New bottle') }} · {{ r.nombre }} ({{ c(b.oz) }})
+                message: >-
+                  {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                  {% set a = r.anterior if r.anterior is mapping else {} %}
+                  {{ 'Empezó a las' if es else 'Started at' }} {{ as_timestamp(b.preparado) | timestamp_custom('%H:%M') }}.
+                  {%- if a %} {{ 'Anterior' if es else 'Previous' }}: {{ c(a.consumido) }} / {{ c(a.oz) }}{% endif %}
+                data:
+                  tag: "bebe_biberon_{{ r.bebe }}"
+  # Resumen cuando pasa la ventana sin más toques (un toque nuevo reinicia la automatización)
+  - delay:
+      seconds: "{{ ventana | int }}"
+  - repeat:
+      for_each: "{{ servicios }}"
+      sequence:
+        - action: "{{ repeat.item }}"
+          continue_on_error: true
+          data:
+            title: "🍼 {{ r.nombre }}"
+            message: >-
+              {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+              {{ 'Tomó' if es else 'Drank' }} {{ c(r.oz_tomadas) }} {{ 'a las' if es else 'at' }} {{ as_timestamp(r.fin) | timestamp_custom('%H:%M') }}.
+              {{ 'Biberón' if es else 'Bottle' }}: {{ c(b.consumido) }} / {{ c(b.oz) }}{{ (' · ' ~ ('quedan' if es else 'left') ~ ' ' ~ c(b.restante)) if b.restante > 0 else ' ✅' }}
+            data:
+              tag: "bebe_toma_{{ r.bebe }}"
+              actions:
+                - action: "BEBE_DESHACER_{{ r.id }}{{ sufijo }}"
+                  title: "{{ 'Deshacer' if es else 'Undo' }}"
+                - action: "BEBE_CORREGIR_{{ r.id }}_{{ u }}{{ sufijo }}"
+                  title: "{{ 'Corregir cantidad…' if es else 'Edit amount…' }}"
+                  behavior: textInput
+                  textInputButtonTitle: "{{ 'Guardar' if es else 'Save' }}"
+                  textInputPlaceholder: "{{ u }}"
+                - action: "BEBE_MOVERNUEVO_{{ r.id }}{{ sufijo }}"
+                  title: "{{ 'Era biberón nuevo' if es else 'It was a new bottle' }}"

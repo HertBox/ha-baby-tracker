@@ -1,0 +1,165 @@
+blueprint:
+  name: "Baby Tracker – voice via a to-do list + AI (optional)"
+  description: >-
+    For voice assistants that can add items to a to-do list (e.g. Alexa lists synced to Home Assistant).
+    Each new item (e.g. "drank one ounce", "finished the bottle", "new bottle") is interpreted by an AI Task
+    entity, logged with the current time, and removed from the list. If the AI fails, the item stays in the
+    list and you get a notification. Requires an AI Task integration (e.g. Google Generative AI, OpenAI).
+  domain: automation
+  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/bebe/voz_lista.yaml
+  input:
+    lista:
+      name: To-do list
+      selector:
+        entity:
+          filter:
+            - domain: todo
+    ia:
+      name: AI Task entity
+      selector:
+        entity:
+          filter:
+            - domain: ai_task
+    bebe:
+      name: Baby
+      description: Only needed if you track more than one baby.
+      default: ""
+      selector:
+        config_entry:
+          integration: bebe
+    celulares:
+      name: Phones to notify
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+    idioma:
+      name: Notification language
+      default: en
+      selector:
+        select:
+          options:
+            - {label: English, value: en}
+            - {label: Español, value: es}
+
+mode: queued
+max: 10
+
+triggers:
+  - trigger: state
+    entity_id: !input lista
+
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.state | int(0) > trigger.from_state.state | int(0) }}"
+
+variables:
+  lista: !input lista
+  ia: !input ia
+  bebe: !input bebe
+  idioma: !input idioma
+  es: "{{ idioma == 'es' }}"
+  celulares: !input celulares
+  servicios: >-
+    {{ celulares | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+
+actions:
+  - action: todo.get_items
+    target:
+      entity_id: "{{ lista }}"
+    data:
+      status: needs_action
+    response_variable: pendientes
+  - repeat:
+      for_each: "{{ pendientes[lista]['items'] }}"
+      sequence:
+        - variables:
+            item: "{{ repeat.item }}"
+            d: {}
+        # La IA gratuita a veces falla: hasta 3 intentos
+        - repeat:
+            sequence:
+              - action: ai_task.generate_data
+                continue_on_error: true
+                response_variable: res
+                data:
+                  entity_id: "{{ ia }}"
+                  task_name: baby_tracker_voice
+                  instructions: >-
+                    You extract data for a baby bottle-feeding log. Text dictated to a voice assistant (may contain
+                    transcription errors; any language): "{{ item.summary }}".
+                    Rules: ignore any time mentioned (the current time is used). "drank X" / "tomó X" → oz_tomadas = X
+                    (in ounces; convert ml to oz dividing by 29.57). "finished the bottle" / "se acabó" → lo_que_quedaba = true.
+                    "X left" / "sobró X" → oz_sobrantes = X. "new bottle" / "biberón nuevo" → nuevo_biberon = true.
+                    "half" / "media" = 0.5. Do not invent amounts. tipo: formula, materna (breast milk) or mixta, else empty.
+                    es_toma = false if the text is clearly not about feeding.
+                  structure:
+                    es_toma: {selector: {boolean: {}}, required: true}
+                    oz_tomadas: {selector: {number: {min: 0, max: 12, step: 0.25}}}
+                    lo_que_quedaba: {selector: {boolean: {}}}
+                    oz_sobrantes: {selector: {number: {min: 0, max: 12, step: 0.25}}}
+                    nuevo_biberon: {selector: {boolean: {}}}
+                    tipo: {selector: {select: {options: [formula, materna, mixta]}}}
+              - variables:
+                  d: "{{ res.data if res is defined and res.data is mapping else {} }}"
+              - if: "{{ d == {} and repeat.index < 3 }}"
+                then:
+                  - delay: 5
+            until: "{{ d != {} or repeat.index >= 3 }}"
+        - variables:
+            oz: "{{ d.get('oz_tomadas') if d.get('oz_tomadas') is number and 0 < d.get('oz_tomadas') <= 12 else none }}"
+            sobra: "{{ 0 if d.get('lo_que_quedaba') else (d.get('oz_sobrantes') if d.get('oz_sobrantes') is number else none) }}"
+            nuevo: "{{ d.get('nuevo_biberon', false) is true }}"
+            datos: >-
+              {%- set x = {'fuente': 'voz', 'nota': item.summary, 'nuevo_biberon': nuevo, 'bebe': bebe} -%}
+              {%- if oz is not none -%}{%- set x = dict(x, oz_tomadas=oz) -%}{%- elif sobra is not none -%}{%- set x = dict(x, oz_sobrantes=sobra) -%}{%- endif -%}
+              {%- if d.get('tipo') in ['formula', 'materna', 'mixta'] -%}{%- set x = dict(x, tipo=d.tipo) -%}{%- endif -%}
+              {{ x }}
+        - choose:
+            - conditions: "{{ d.get('es_toma') and (oz is not none or sobra is not none) }}"
+              sequence:
+                - action: bebe.registrar_toma
+                  data: "{{ datos }}"
+                  response_variable: r
+                - action: todo.remove_item
+                  target:
+                    entity_id: "{{ lista }}"
+                  data:
+                    item: "{{ item.uid }}"
+                - variables:
+                    u: "{{ r.unidad }}"
+                - repeat:
+                    for_each: "{{ servicios }}"
+                    sequence:
+                      - action: "{{ repeat.item }}"
+                        continue_on_error: true
+                        data:
+                          title: "🍼 {{ r.nombre }}"
+                          message: >-
+                            {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                            {{ 'Tomó' if es else 'Drank' }} {{ c(r.oz_tomadas) }} · {{ 'Biberón' if es else 'Bottle' }} {{ c(r.biberon.consumido) }} / {{ c(r.biberon.oz) }} · "{{ item.summary }}"
+                          data:
+                            tag: "bebe_toma_{{ r.bebe }}"
+                            actions:
+                              - action: "BEBE_DESHACER_{{ r.id }}__{{ r.bebe }}"
+                                title: "{{ 'Deshacer' if es else 'Undo' }}"
+            - conditions: "{{ d.get('es_toma') and nuevo }}"
+              sequence:
+                - action: bebe.nuevo_biberon
+                  data:
+                    bebe: "{{ bebe }}"
+                - action: todo.remove_item
+                  target:
+                    entity_id: "{{ lista }}"
+                  data:
+                    item: "{{ item.uid }}"
+          default:
+            - repeat:
+                for_each: "{{ servicios }}"
+                sequence:
+                  - action: "{{ repeat.item }}"
+                    continue_on_error: true
+                    data:
+                      title: "🍼 {{ 'No entendí' if es else 'Could not understand' }}"
+                      message: "\"{{ item.summary }}\" — {{ 'sigue en la lista' if es else 'it stays in the list' }}"

@@ -22,6 +22,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_DB,
+    CONF_UNIDAD,
     CONF_NOMBRE,
     COLOR_POPO_DEFAULT,
     CONF_COLOR_POPO,
@@ -552,7 +553,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for grupo, soporte in ((SERVICIOS, SupportsResponse.OPTIONAL), (CONSULTAS, SupportsResponse.ONLY)):
             for nombre, (fn, esquema) in grupo.items():
                 async def _handler(call: ServiceCall, fn: Handler = fn) -> ServiceResponse:
-                    return await fn(hass, call)
+                    r = await fn(hass, call)
+                    if isinstance(r, dict):
+                        # Datos del bebé en cada respuesta (para blueprints y notificaciones)
+                        e = _entrada(hass, call)
+                        r = {**r, "bebe": e.entry_id, "nombre": e.data[CONF_NOMBRE],
+                             "unidad": e.data.get(CONF_UNIDAD, "oz")}
+                    return r
                 hass.services.async_register(
                     DOMAIN, nombre, _handler, schema=esquema.extend({vol.Optional("bebe"): cv.string}),
                     supports_response=soporte,
