@@ -815,7 +815,7 @@
   },
   "exceptions": {
     "fecha_futura": {
-      "message": "'{campo}' is in the future: {valor}"
+      "message": "{campo} is in the future: {valor}"
     },
     "no_cargada": {
       "message": "Baby Tracker is not loaded"
@@ -824,7 +824,7 @@
       "message": "There are several babies: specify which one in the 'bebe' field ({bebes})"
     },
     "bebe_no_encontrado": {
-      "message": "Baby '{bebe}' not found"
+      "message": "Baby not found: {bebe}"
     },
     "falta_cantidad": {
       "message": "Provide oz_tomadas, or oz_sobrantes (0 = finished what was left)"

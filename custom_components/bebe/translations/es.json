@@ -815,7 +815,7 @@
   },
   "exceptions": {
     "fecha_futura": {
-      "message": "'{campo}' está en el futuro: {valor}"
+      "message": "{campo} está en el futuro: {valor}"
     },
     "no_cargada": {
       "message": "La integración Baby Tracker no está cargada"
@@ -824,7 +824,7 @@
       "message": "Hay varios bebés: indica cuál en el campo 'bebe' ({bebes})"
     },
     "bebe_no_encontrado": {
-      "message": "No encuentro al bebé '{bebe}'"
+      "message": "No encuentro al bebé: {bebe}"
     },
     "falta_cantidad": {
       "message": "Indica oz_tomadas, u oz_sobrantes (0 = se acabó lo que quedaba)"

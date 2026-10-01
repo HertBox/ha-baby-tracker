@@ -5,6 +5,8 @@ Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones 
 
 ## [1.0.0] - 2026-10-01
 Primera versión pública. Incluye todo lo de 0.4.0 y 0.5.0 (abajo).
+### Corregido
+- Dos mensajes de error tenían marcadores entre comillas simples (no lo permite la validación de Home Assistant).
 
 ## [0.5.0] - 2026-10-01
 ### Agregado
