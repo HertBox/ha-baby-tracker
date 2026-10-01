@@ -1,6 +1,11 @@
 // Panel "Bebé" para Home Assistant: registro y edición de tomas, medidas y gráficas.
 // Web component sin dependencias; usa las variables de tema de HA (claro/oscuro).
 
+// ---------- Idioma: español en el código, inglés vía diccionario (según el idioma de HA) ----------
+let IDIOMA = "es";
+// t("texto en español {var}", {var: valor}) → texto en el idioma activo
+const t = (s, v = {}) => (IDIOMA === "es" ? s : (EN[s] ?? s)).replace(/\{(\w+)\}/g, (_, k) => (v[k] ?? ""));
+
 const TIPOS = { formula: "Fórmula", materna: "Materna", mixta: "Mixta" };
 const CONFIANZAS = { exacto: "Exacto", estimado: "Estimado", inferido: "Inferido" };
 const FUENTES = {
@@ -39,24 +44,36 @@ const aServicio = (v) => v.replace("T", " ") + (v.length === 16 ? ":00" : "");
 const hora = (iso) => { const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const sumarDias = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const inicioDia = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
-const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+let DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+let MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+// Traduce las etiquetas de las tablas fijas (tipos, colores, días…) una sola vez
+function aplicarIdioma(lang) {
+  IDIOMA = String(lang || "es").toLowerCase().startsWith("es") ? "es" : "en";
+  if (IDIOMA === "es") return;
+  for (const obj of [TIPOS, CONFIANZAS, FUENTES, TIPOS_PANAL]) for (const k of Object.keys(obj)) obj[k] = t(obj[k]);
+  for (const fila of [...COLORES, ...CONSISTENCIAS]) fila[1] = t(fila[1]);
+  for (const k of Object.keys(NOMBRE_COLOR)) NOMBRE_COLOR[k] = t(NOMBRE_COLOR[k]);
+  for (const k of Object.keys(NOMBRE_CONS)) NOMBRE_CONS[k] = t(NOMBRE_CONS[k]);
+  DIAS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  MESES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+}
 
 function relativo(iso) {
   const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
   const a = Math.abs(min), h = Math.floor(a / 60), m = a % 60;
-  const t = h ? `${h} h ${pad(m)} min` : `${m} min`;
-  return min >= 0 ? `hace ${t}` : `en ${t}`;
+  const tt = h ? `${h} h ${pad(m)} min` : `${m} min`;
+  return min >= 0 ? t("hace {t}", { t: tt }) : t("en {t}", { t: tt });
 }
 
 function edadTexto(dias) {
   if (dias === null || dias === undefined || isNaN(dias)) return "—";
   dias = Number(dias);
-  if (dias < 14) return `${dias} días`;
+  if (dias < 14) return t("{n} días", { n: dias });
   const sem = Math.floor(dias / 7), d = dias % 7;
-  if (dias < 90) return `${sem} sem${d ? ` ${d} d` : ""} (${dias} días)`;
+  if (dias < 90) return t("{s} sem{d} ({n} días)", { s: sem, d: d ? ` ${d} d` : "", n: dias });
   const meses = Math.floor(dias / 30.44);
-  return `${meses} meses (${sem} sem)`;
+  return t("{m} meses ({s} sem)", { m: meses, s: sem });
 }
 
 // Gráfica de barras SVG; series apiladas; línea de meta opcional.
@@ -93,14 +110,14 @@ function barras({ etiquetas, series, meta, unidad, alto = 180 }) {
   });
   if (meta) {
     svg += `<line x1="${izq}" x2="${W - 4}" y1="${y(meta)}" y2="${y(meta)}" class="meta"/>`
-         + `<text x="${W - 6}" y="${y(meta) - 4}" class="meta-txt" text-anchor="end">meta ${num(meta, 1)}</text>`;
+         + `<text x="${W - 6}" y="${y(meta) - 4}" class="meta-txt" text-anchor="end">${t("meta")} ${num(meta, 1)}</text>`;
   }
   return svg + "</svg>";
 }
 
 // Gráfica de línea SVG (x numérico = días de edad).
 function linea({ puntos, unidad, alto = 170 }) {
-  if (puntos.length === 0) return `<p class="vacio">Sin datos todavía.</p>`;
+  if (puntos.length === 0) return `<p class="vacio">${t("Sin datos todavía.")}</p>`;
   const W = 640, H = alto, izq = 40, abajo = 24, arriba = 12;
   const xs = puntos.map((p) => p.x), ys = puntos.map((p) => p.y);
   const x0 = Math.min(0, ...xs), x1 = Math.max(x0 + 7, ...xs);
@@ -115,7 +132,7 @@ function linea({ puntos, unidad, alto = 170 }) {
   }
   svg += `<polyline points="${puntos.map((p) => `${X(p.x)},${Y(p.y)}`).join(" ")}" class="linea"/>`;
   puntos.forEach((p) => {
-    svg += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" class="punto"><title>Día ${p.x}: ${num(p.y, 2)} ${unidad}</title></circle>`
+    svg += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" class="punto"><title>${t("Día")} ${p.x}: ${num(p.y, 2)} ${unidad}</title></circle>`
          + `<text x="${X(p.x)}" y="${H - 8}" class="eje" text-anchor="middle">${p.x}d</text>`;
   });
   return svg + "</svg>";
@@ -154,15 +171,15 @@ class BebePanel extends HTMLElement {
   }
 
   _actualizarEdad() {
-    this._actualizarEdad();
+    const te = this.shadowRoot && this.shadowRoot.getElementById("titulo-edad");
+    if (te) { const d = this._val("edad"); te.textContent = d !== null ? `· ${edadTexto(d)}` : ""; }
   }
   set narrow(n) { this._narrow = n; if (this._menu) this._menu.narrow = n; }
   set hass(h) {
     this._hass = h;
     if (this._menu) this._menu.hass = h;
-    const te = this.shadowRoot && this.shadowRoot.getElementById("titulo-edad");
-    if (te) { const d = this._val("edad"); te.textContent = d !== null ? `· ${edadTexto(d)}` : ""; }
-    if (!this._listo) { this._listo = true; this._montar(); return; }
+    if (!this._listo) { aplicarIdioma(h.language); this._listo = true; this._montar(); return; }
+    this._actualizarEdad();
     if (this._tab === "hoy") this._pintarResumen();
     if (this._tab === "materna") this._pintarKpisMaterna();
   }
@@ -192,7 +209,7 @@ class BebePanel extends HTMLElement {
 
   async _accion(fn, ok) {
     try { const r = await fn(); if (ok) this._aviso(ok); return r; }
-    catch (e) { this._aviso(`Error: ${e.message || e}`); throw e; }
+    catch (e) { this._aviso(`${t("Error")}: ${e.message || e}`); throw e; }
   }
 
   // ---------- estructura ----------
@@ -206,7 +223,7 @@ class BebePanel extends HTMLElement {
         `<button data-bebe="${b.entry_id}" class="${b.entry_id === this._cfg.entry_id ? "activa" : ""}">${esc(b.nombre)}</button>`).join("")}</div>` : ""}
       <nav class="tabs">
         ${[["hoy", "Hoy"], ["tomas", "Tomas"], ["materna", "Materna"], ["medidas", "Medidas"], ["graficas", "Gráficas"], ["ajustes", "Ajustes"]]
-          .map(([k, t]) => `<button data-tab="${k}" class="${k === this._tab ? "activa" : ""}">${t}</button>`).join("")}
+          .map(([k, e]) => `<button data-tab="${k}" class="${k === this._tab ? "activa" : ""}">${t(e)}</button>`).join("")}
       </nav>
       <main id="contenido"></main>
       <div id="dialogo"></div>`;
@@ -253,9 +270,9 @@ class BebePanel extends HTMLElement {
       <section class="kpis" id="kpis"></section>
       <section class="tarjeta">
         <details id="detalle">
-          <summary>Registrar con otra hora…</summary>
+          <summary>${t("Registrar con otra hora…")}</summary>
           ${this._formToma({ fin: aInputLocal(new Date()), oz_tomadas: "", tipo: "formula" }, "nueva", true)}
-          <button class="primario" id="guardar-nueva">Guardar toma</button>
+          <button class="primario" id="guardar-nueva">${t("Guardar toma")}</button>
         </details>
       </section>`;
   }
@@ -273,62 +290,62 @@ class BebePanel extends HTMLElement {
     const quedan = b ? b.restante : ozDef;
     const chips = [[0.5, "½"], [1, "1"], [1.5, "1½"], [2, "2"], [2.5, "2½"]].filter(([v]) => v < quedan);
     el.innerHTML = `
-      <div class="fila-titulo"><h2>Biberón en curso ${b ? `<span class="badge ${b.tipo || "formula"}">${TIPOS[b.tipo] || "Fórmula"}</span>` : ""}</h2></div>
+      <div class="fila-titulo"><h2>${t("Biberón en curso")} ${b ? `<span class="badge ${b.tipo || "formula"}">${TIPOS[b.tipo] || TIPOS.formula}</span>` : ""}</h2></div>
       <div class="nuevos">
-        <button class="secundario chico" id="nuevo-bib">＋ Fórmula ${cant(ozDef, 1)}</button>
-        <button class="secundario chico" id="nuevo-materna" ${reservaN ? "" : "disabled"}>＋ Materna${reservaN ? ` (${reservaN} en reserva)` : " (sin reserva)"}</button>
+        <button class="secundario chico" id="nuevo-bib">＋ ${TIPOS.formula} ${cant(ozDef, 1)}</button>
+        <button class="secundario chico" id="nuevo-materna" ${reservaN ? "" : "disabled"}>＋ ${TIPOS.materna}${reservaN ? ` ${t("({n} en reserva)", { n: reservaN })}` : ` ${t("(sin reserva)")}`}</button>
       </div>
       ${b ? `
         <div class="progreso grande-p"><div style="width:${Math.min(100, b.consumido / b.oz * 100)}%"></div></div>
-        <div class="bib-info"><b>${cantN(b.consumido, 2)} de ${cant(b.oz, 2)}</b>
-          <button class="icono lapiz" id="editar-oz" title="Cambiar el tamaño de este biberón" aria-label="Cambiar tamaño">✏️</button>
-          · quedan <b>${cant(b.restante, 2)}</b></div>
-        <div class="sub">${b.primera_toma ? `Primera toma ${hora(b.primera_toma)} · ${b.n_tomas} toma${b.n_tomas === 1 ? "" : "s"}` : `Preparado ${hora(b.preparado)} · sin tomas aún`}
-          ${b.vence ? ` · límite ${hora(b.vence)}` : ""}</div>
-        ${b.vencido ? `<div class="alerta-txt">⚠️ Ya pasó el límite desde su primera toma: considera preparar uno nuevo.</div>` : ""}`
-      : `<div class="sub">No hay biberón abierto: la siguiente toma empieza uno de ${cant(ozDef, 1)}.</div>`}
+        <div class="bib-info"><b>${t("{a} de {b}", { a: cantN(b.consumido, 2), b: cant(b.oz, 2) })}</b>
+          <button class="icono lapiz" id="editar-oz" title="${t("Cambiar el tamaño de este biberón")}" aria-label="${t("Cambiar tamaño")}">✏️</button>
+          · ${t("quedan")} <b>${cant(b.restante, 2)}</b></div>
+        <div class="sub">${b.primera_toma ? t(b.n_tomas === 1 ? "Primera toma {h} · 1 toma" : "Primera toma {h} · {n} tomas", { h: hora(b.primera_toma), n: b.n_tomas }) : t("Preparado {h} · sin tomas aún", { h: hora(b.preparado) })}
+          ${b.vence ? ` · ${t("límite")} ${hora(b.vence)}` : ""}</div>
+        ${b.vencido ? `<div class="alerta-txt">⚠️ ${t("Ya pasó el límite desde su primera toma: considera preparar uno nuevo.")}</div>` : ""}`
+      : `<div class="sub">${t("No hay biberón abierto: la siguiente toma empieza uno de {c}.", { c: cant(ozDef, 1) })}</div>`}
       ${(b && b.en_pausa ? b.en_pausa : []).map((p) => `
         <div class="pausa ${p.vencido ? "vencida" : ""}">
-          <div><b>En pausa:</b> ${TIPOS[p.tipo] || p.tipo} · ${cantN(p.consumido, 2)} de ${cant(p.oz, 2)}
-            <div class="sub">${p.vencido ? `<span class="rojo">Ya pasó su límite (${hora(p.vence)}): mejor tírala.</span>` : p.vence ? `Usar antes de ${hora(p.vence)}` : ""}
-              · lo que sobre de la actual se sumará aquí</div></div>
+          <div><b>${t("En pausa:")}</b> ${TIPOS[p.tipo] || p.tipo} · ${t("{a} de {b}", { a: cantN(p.consumido, 2), b: cant(p.oz, 2) })}
+            <div class="sub">${p.vencido ? `<span class="rojo">${t("Ya pasó su límite ({h}): mejor tírala.", { h: hora(p.vence) })}</span>` : p.vence ? t("Usar antes de {h}", { h: hora(p.vence) }) : ""}
+              · ${t("lo que sobre de la actual se sumará aquí")}</div></div>
           <div class="acciones">
-            <button class="chip" data-reanudar="${p.id}" ${p.vencido ? "disabled" : ""}>Continuar</button>
-            <button class="chip peligro-chip" data-tirar="${p.id}">Tirar lo que queda (${cant(p.restante, 2)})</button>
+            <button class="chip" data-reanudar="${p.id}" ${p.vencido ? "disabled" : ""}>${t("Continuar")}</button>
+            <button class="chip peligro-chip" data-tirar="${p.id}">${t("Tirar lo que queda ({c})", { c: cant(p.restante, 2) })}</button>
           </div>
         </div>`).join("")}
-      <div class="etq pregunta">¿Cuánto tomó?</div>
+      <div class="etq pregunta">${t("¿Cuánto tomó?")}</div>
       <div class="chips" id="chips-toma">
-        ${chips.map(([v, t]) => `<button class="chip" data-oz="${v}">${esMl() ? cant(v) : `${t} oz`}</button>`).join("")}
-        <button class="chip fuerte" data-oz="resto">Lo que quedaba (${cant(quedan, 2)})</button>
-        <button class="chip" data-oz="otro">Otro…</button>
+        ${chips.map(([v, e]) => `<button class="chip" data-oz="${v}">${esMl() ? cant(v) : `${e} oz`}</button>`).join("")}
+        <button class="chip fuerte" data-oz="resto">${t("Lo que quedaba ({c})", { c: cant(quedan, 2) })}</button>
+        <button class="chip" data-oz="otro">${t("Otro…")}</button>
       </div>`;
     el.querySelector("#nuevo-bib").onclick = () => this._nuevoBiberon();
     const lapiz = el.querySelector("#editar-oz");
     if (lapiz) lapiz.onclick = async () => {
       // Solo este biberón (caso especial); las oz por defecto de Ajustes no cambian
-      const v = prompt(`¿De cuánto es este biberón? (${U()}; ya tomó ${cant(b.consumido, 2)})`, cantN(b.oz, 2));
+      const v = prompt(t("¿De cuánto es este biberón? ({u}; ya tomó {c})", { u: U(), c: cant(b.consumido, 2) }), cantN(b.oz, 2));
       if (v === null) return;
       const oz = aOz(parseFloat(v.replace(",", ".")));
-      if (!(oz > 0 && oz <= 12)) { this._aviso("Cantidad no válida"); return; }
-      if (oz < b.consumido) { this._aviso(`No puede ser menor a lo que ya tomó (${cant(b.consumido, 2)})`); return; }
-      await this._accion(() => this._servicio("corregir_biberon", { id: b.id, oz }, true), `Este biberón ahora es de ${cant(oz, 2)}`);
+      if (!(oz > 0 && oz <= 12)) { this._aviso(t("Cantidad no válida")); return; }
+      if (oz < b.consumido) { this._aviso(t("No puede ser menor a lo que ya tomó ({c})", { c: cant(b.consumido, 2) })); return; }
+      await this._accion(() => this._servicio("corregir_biberon", { id: b.id, oz }, true), t("Este biberón ahora es de {c}", { c: cant(oz, 2) }));
     };
     el.querySelector("#nuevo-materna").onclick = () => this._usarReserva(null);
     el.querySelectorAll("[data-reanudar]").forEach((x) => x.onclick = async () => {
-      await this._accion(() => this._servicio("reanudar_biberon", { id: Number(x.dataset.reanudar) }, true), "Seguimos con ese biberón");
+      await this._accion(() => this._servicio("reanudar_biberon", { id: Number(x.dataset.reanudar) }, true), t("Seguimos con ese biberón"));
     });
     el.querySelectorAll("[data-tirar]").forEach((x) => x.onclick = async () => {
-      if (!confirm("¿Tirar lo que queda de ese biberón?")) return;
-      await this._accion(() => this._servicio("cerrar_biberon", { id: Number(x.dataset.tirar) }, true), "Biberón tirado");
+      if (!confirm(t("¿Tirar lo que queda de ese biberón?"))) return;
+      await this._accion(() => this._servicio("cerrar_biberon", { id: Number(x.dataset.tirar) }, true), t("Biberón tirado"));
     });
     el.querySelector("#chips-toma").onclick = async (e) => {
       const bt = e.target.closest("button[data-oz]"); if (!bt) return;
       if (bt.dataset.oz === "otro") {
-        const v = prompt(`¿Cuánto tomó? (${U()})`, "");
+        const v = prompt(`${t("¿Cuánto tomó?")} (${U()})`, "");
         if (v === null) return;
         const oz = aOz(parseFloat(v.replace(",", ".")));
-        if (!(oz > 0 && oz <= 12)) { this._aviso("Cantidad no válida"); return; }
+        if (!(oz > 0 && oz <= 12)) { this._aviso(t("Cantidad no válida")); return; }
         return this._registrarRapido({ oz_tomadas: oz });
       }
       this._registrarRapido(bt.dataset.oz === "resto" ? { oz_sobrantes: 0 } : { oz_tomadas: Number(bt.dataset.oz) });
@@ -341,8 +358,8 @@ class BebePanel extends HTMLElement {
     try {
       const r = await this._accion(() => this._servicio("registrar_toma", { ...datos, fuente: "app" }, true));
       const b = r.biberon;
-      this._aviso(`Tomó ${cant(r.oz_registradas, 2)} · biberón ${num(b.consumido, 2)}/${num(b.oz, 2)}`
-        + (r.biberon_nuevo && r.anterior ? " · se empezó un biberón nuevo" : ""));
+      this._aviso(t("Tomó {c} · biberón {a}/{b}", { c: cant(r.oz_registradas, 2), a: cantN(b.consumido, 2), b: cant(b.oz, 2) })
+        + (r.biberon_nuevo && r.anterior ? ` · ${t("se empezó un biberón nuevo")}` : ""));
     } finally { botones.forEach((x) => { x.disabled = false; }); }
   }
 
@@ -350,8 +367,8 @@ class BebePanel extends HTMLElement {
     // El tamaño sale de Ajustes (oz por biberón); el anterior queda incompleto
     const r = await this._accion(() => this._servicio("nuevo_biberon", {}, true));
     const a = r.anterior;
-    this._aviso(`Biberón nuevo de ${cant(r.biberon.oz, 1)}`
-      + (a && a.estado === "incompleto" ? ` · el anterior quedó en ${cantN(a.consumido, 2)}/${cant(a.oz, 2)}` : ""));
+    this._aviso(t("Biberón nuevo de {c}", { c: cant(r.biberon.oz, 1) })
+      + (a && a.estado === "incompleto" ? ` · ${t("el anterior quedó en {a}/{b}", { a: cantN(a.consumido, 2), b: cant(a.oz, 2) })}` : ""));
   }
 
   _pintarResumen() {
@@ -362,23 +379,23 @@ class BebePanel extends HTMLElement {
     const ozHoy = this._num("oz_hoy") ?? 0, meta = this._num("meta_oz_dia");
     const avance = meta ? Math.min(100, Math.round(ozHoy / meta * 100)) : 0;
     const pct = this._num("pct_terminados"), ritmo = this._num("ritmo_oz_hora");
-    const ph = this._st("panales_hoy"), t = ph ? ph.attributes : {};
+    const ph = this._st("panales_hoy"), tp = ph ? ph.attributes : {};
     k.innerHTML = `
       <div class="kpi completo">
-        <div class="etq">Hoy: ${cantN(ozHoy, 1)} de ${cant(meta, 1)} · ${this._val("tomas_hoy") ?? 0} tomas · ${this._val("biberones_hoy") ?? 0} biberones · ${this._val("panales_hoy") ?? 0} pañales</div>
+        <div class="etq">${t("Hoy: {a} de {b} · {c} tomas · {d} biberones · {e} pañales", { a: cantN(ozHoy, 1), b: cant(meta, 1), c: this._val("tomas_hoy") ?? 0, d: this._val("biberones_hoy") ?? 0, e: this._val("panales_hoy") ?? 0 })}</div>
         <div class="progreso"><div style="width:${avance}%"></div></div>
-        <div class="sub">${avance}% de la meta · ${Math.round(ozHoy * ML_POR_OZ)} ml</div>
+        <div class="sub">${t("{p}% de la meta", { p: avance })} · ${Math.round(ozHoy * ML_POR_OZ)} ml</div>
       </div>
-      <div class="kpi"><div class="etq">Ritmo (últimas 24 h)</div><div class="num">${cantN(ritmo, 2)} <small>${U()}/h</small></div>
-        <div class="sub">meta ${meta ? cant(meta / 24, 2) : "—"}/h</div></div>
-      <div class="kpi"><div class="etq">Oz por toma (7 d)</div><div class="num">${cantN(this._num("oz_por_toma"), 2)} <small>${U()}</small></div>
-        <div class="sub">${num(this._num("tomas_por_dia"), 1)} tomas/día · cada ${num(this._num("intervalo"), 1)} h</div></div>
-      <div class="kpi"><div class="etq">Pañales hoy</div><div class="num sm">💧 ${t.pipi ?? 0} · 💩 ${t.popo ?? 0} · ambos ${t.ambos ?? 0}</div>
-        <div class="sub">${num(this._num("panales_por_dia"), 1)}/día (7 d) · cada ${num(this._num("intervalo_panales"), 1)} h</div></div>
-      <div class="kpi"><div class="etq">Biberones terminados (7 d)</div><div class="num">${pct === null ? "—" : `${pct}<small>%</small>`}</div>
-        <div class="sub">desechado ${cant(this._num("desechado_7d"), 1)}</div></div>
-      <div class="kpi"><div class="etq">Edad</div><div class="num sm">${edadTexto(this._val("edad"))}</div></div>
-      <div class="kpi"><div class="etq">Peso · Talla</div><div class="num sm">${num(this._num("peso"), 2)} kg · ${num(this._num("talla"), 1)} cm</div></div>`;
+      <div class="kpi"><div class="etq">${t("Ritmo (últimas 24 h)")}</div><div class="num">${cantN(ritmo, 2)} <small>${U()}/h</small></div>
+        <div class="sub">${t("meta")} ${meta ? cant(meta / 24, 2) : "—"}/h</div></div>
+      <div class="kpi"><div class="etq">${t("Por toma (7 d)")}</div><div class="num">${cantN(this._num("oz_por_toma"), 2)} <small>${U()}</small></div>
+        <div class="sub">${t("{n} tomas/día · cada {h} h", { n: num(this._num("tomas_por_dia"), 1), h: num(this._num("intervalo"), 1) })}</div></div>
+      <div class="kpi"><div class="etq">${t("Pañales hoy")}</div><div class="num sm">💧 ${tp.pipi ?? 0} · 💩 ${tp.popo ?? 0} · ${t("ambos")} ${tp.ambos ?? 0}</div>
+        <div class="sub">${t("{n}/día (7 d) · cada {h} h", { n: num(this._num("panales_por_dia"), 1), h: num(this._num("intervalo_panales"), 1) })}</div></div>
+      <div class="kpi"><div class="etq">${t("Biberones terminados (7 d)")}</div><div class="num">${pct === null ? "—" : `${pct}<small>%</small>`}</div>
+        <div class="sub">${t("desechado")} ${cant(this._num("desechado_7d"), 1)}</div></div>
+      <div class="kpi"><div class="etq">${t("Edad")}</div><div class="num sm">${edadTexto(this._val("edad"))}</div></div>
+      <div class="kpi"><div class="etq">${t("Peso · Talla")}</div><div class="num sm">${num(this._num("peso"), 2)} kg · ${num(this._num("talla"), 1)} cm</div></div>`;
   }
 
   // Lo más importante: última toma y siguiente
@@ -389,14 +406,14 @@ class BebePanel extends HTMLElement {
     const vencida = prox && new Date(prox) < new Date();
     el.innerHTML = `
       <div class="hero-col">
-        <div class="etq">Última toma</div>
+        <div class="etq">${t("Última toma")}</div>
         <div class="hero-hora">${u ? hora(u.state) : "—"}</div>
-        <div class="sub">${u ? `${relativo(u.state)} · ${cant(u.attributes.oz_tomadas, 2)}` : "Sin registros"}</div>
+        <div class="sub">${u ? `${relativo(u.state)} · ${cant(u.attributes.oz_tomadas, 2)}` : t("Sin registros")}</div>
       </div>
       <div class="hero-col ${vencida ? "vencida" : ""}">
-        <div class="etq">Siguiente toma</div>
+        <div class="etq">${t("Siguiente toma")}</div>
         <div class="hero-hora">${prox ? hora(prox) : "—"}</div>
-        <div class="sub">${prox ? (vencida ? `ya toca · ${relativo(prox)}` : relativo(prox)) : ""}</div>
+        <div class="sub">${prox ? (vencida ? `${t("ya toca")} · ${relativo(prox)}` : relativo(prox)) : ""}</div>
       </div>`;
   }
 
@@ -407,13 +424,13 @@ class BebePanel extends HTMLElement {
     const ok = u && !["unknown", "unavailable"].includes(u.state);
     const a = ok ? u.attributes : {};
     el.innerHTML = `
-      <div class="fila-titulo"><h2>🧷 Pañal</h2>
-        <span class="sub">${ok ? `último ${hora(u.state)} (${relativo(u.state)}) · ${TIPOS_PANAL[a.tipo] || ""}${a.color ? ` · ${NOMBRE_COLOR[a.color] || a.color}` : ""}` : "sin registros"}</span></div>
-      ${pipi ? `<div class="sub">Último pipí ${relativo(pipi)}</div>` : ""}
+      <div class="fila-titulo"><h2>🧷 ${t("Pañal")}</h2>
+        <span class="sub">${ok ? `${t("último")} ${hora(u.state)} (${relativo(u.state)}) · ${TIPOS_PANAL[a.tipo] || ""}${a.color ? ` · ${NOMBRE_COLOR[a.color] || a.color}` : ""}` : t("sin registros")}</span></div>
+      ${pipi ? `<div class="sub">${t("Último pipí")} ${relativo(pipi)}</div>` : ""}
       <div class="chips grandes" id="chips-panal">
-        <button class="chip" data-p="pipi">💧 Pipí</button>
-        <button class="chip" data-p="popo">💩 Popó</button>
-        <button class="chip" data-p="ambos">💧💩 Ambos</button>
+        <button class="chip" data-p="pipi">${TIPOS_PANAL.pipi}</button>
+        <button class="chip" data-p="popo">${TIPOS_PANAL.popo}</button>
+        <button class="chip" data-p="ambos">${TIPOS_PANAL.ambos}</button>
       </div>`;
     el.querySelector("#chips-panal").onclick = (e) => {
       const b = e.target.closest("button[data-p]"); if (!b) return;
@@ -429,14 +446,14 @@ class BebePanel extends HTMLElement {
     }
     const datos = { tipo, fuente: "app", ...extra, ...(fin ? { fin } : {}) };
     const p = await this._accion(() => this._servicio("registrar_panal", datos, true));
-    this._aviso(`Pañal registrado: ${TIPOS_PANAL[p.tipo]}${p.color ? ` · ${NOMBRE_COLOR[p.color]}` : ""}${this._avisoColor(p.color)}`);
+    this._aviso(`${t("Pañal registrado:")} ${TIPOS_PANAL[p.tipo]}${p.color ? ` · ${NOMBRE_COLOR[p.color]}` : ""}${this._avisoColor(p.color)}`);
     return p;
   }
 
   _avisoColor(color) {
     const dias = this._num("edad") ?? 99;
     if (color === "rojo" || color === "blanco" || (color === "negro" && dias > 5)) {
-      return " — este color conviene comentarlo con el pediatra";
+      return ` — ${t("este color conviene comentarlo con el pediatra")}`;
     }
     return "";
   }
@@ -448,21 +465,21 @@ class BebePanel extends HTMLElement {
       const sel = { color: actual.color || this._cfg.color_popo || null,
                     consistencia: actual.consistencia || this._cfg.consistencia_popo || null };
       const { dlg, cerrar } = this._modal(`
-        <h2>¿Cómo fue la popó?</h2>
-        <div class="etq">Color</div>
-        <div class="chips" id="op-color">${COLORES.map(([k, t, c]) =>
-          `<button class="chip ${sel.color === k ? "activa" : ""}" data-c="${k}"><span class="muestra" style="background:${c}"></span>${t}</button>`).join("")}</div>
-        <div class="etq sep-etq">Consistencia</div>
-        <div class="chips" id="op-cons">${CONSISTENCIAS.map(([k, t]) =>
-          `<button class="chip ${sel.consistencia === k ? "activa" : ""}" data-k="${k}">${t}</button>`).join("")}</div>
+        <h2>${t("¿Cómo fue la popó?")}</h2>
+        <div class="etq">${t("Color")}</div>
+        <div class="chips" id="op-color">${COLORES.map(([k, e, c]) =>
+          `<button class="chip ${sel.color === k ? "activa" : ""}" data-c="${k}"><span class="muestra" style="background:${c}"></span>${e}</button>`).join("")}</div>
+        <div class="etq sep-etq">${t("Consistencia")}</div>
+        <div class="chips" id="op-cons">${CONSISTENCIAS.map(([k, e]) =>
+          `<button class="chip ${sel.consistencia === k ? "activa" : ""}" data-k="${k}">${e}</button>`).join("")}</div>
         <div class="botones"><span class="flex"></span>
-          <button class="secundario" id="cancelar">Cancelar</button>
-          <button class="primario" id="ok-popo">Guardar</button></div>`);
+          <button class="secundario" id="cancelar">${t("Cancelar")}</button>
+          <button class="primario" id="ok-popo">${t("Guardar")}</button></div>`);
       const marcar = (cont, attr, val) => cont.querySelectorAll("button").forEach((x) => x.classList.toggle("activa", x.dataset[attr] === val));
       dlg.querySelector("#op-color").onclick = (e) => { const b = e.target.closest("[data-c]"); if (!b) return; sel.color = b.dataset.c; marcar(dlg.querySelector("#op-color"), "c", sel.color); };
       dlg.querySelector("#op-cons").onclick = (e) => { const b = e.target.closest("[data-k]"); if (!b) return; sel.consistencia = b.dataset.k; marcar(dlg.querySelector("#op-cons"), "k", sel.consistencia); };
       dlg.querySelector("#ok-popo").onclick = () => {
-        if (!sel.color || !sel.consistencia) { this._aviso("Elige color y consistencia (o \"No sé\")"); return; }
+        if (!sel.color || !sel.consistencia) { this._aviso(t("Elige color y consistencia (o \"No sé\")")); return; }
         cerrar(); resolver(sel);
       };
       dlg.querySelector("#cancelar").onclick = () => { cerrar(); resolver(null); };
@@ -476,33 +493,33 @@ class BebePanel extends HTMLElement {
       ? { tipo: "pipi", fin: aInputLocal(base), color: this._cfg.color_popo, consistencia: this._cfg.consistencia_popo }
       : { ...p, fin: aInputLocal(new Date(p.fin)) };
     const { dlg, cerrar } = this._modal(`
-      <h2>${nuevo ? "Nuevo pañal" : `Pañal de las ${hora(p.fin)}`}</h2>
+      <h2>${nuevo ? t("Nuevo pañal") : t("Pañal de las {h}", { h: hora(p.fin) })}</h2>
       <form class="form" id="form-panal" onsubmit="return false">
-        <label class="completo">Hora<input type="datetime-local" name="fin" value="${datos.fin}"></label>
-        <label class="completo">Tipo<select name="tipo">${Object.entries(TIPOS_PANAL).map(([k, v]) => `<option value="${k}" ${k === datos.tipo ? "selected" : ""}>${v}</option>`).join("")}</select></label>
-        <label>Color<select name="color"><option value="">—</option>${COLORES.map(([k, t]) => `<option value="${k}" ${k === datos.color ? "selected" : ""}>${t}</option>`).join("")}</select></label>
-        <label>Consistencia<select name="consistencia"><option value="">—</option>${CONSISTENCIAS.map(([k, t]) => `<option value="${k}" ${k === datos.consistencia ? "selected" : ""}>${t}</option>`).join("")}</select></label>
-        <label class="completo">Nota<input type="text" name="nota" value="${esc(datos.nota || "")}"></label>
+        <label class="completo">${t("Hora")}<input type="datetime-local" name="fin" value="${datos.fin}"></label>
+        <label class="completo">${t("Tipo")}<select name="tipo">${Object.entries(TIPOS_PANAL).map(([k, v]) => `<option value="${k}" ${k === datos.tipo ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+        <label>${t("Color")}<select name="color"><option value="">—</option>${COLORES.map(([k, e]) => `<option value="${k}" ${k === datos.color ? "selected" : ""}>${e}</option>`).join("")}</select></label>
+        <label>${t("Consistencia")}<select name="consistencia"><option value="">—</option>${CONSISTENCIAS.map(([k, e]) => `<option value="${k}" ${k === datos.consistencia ? "selected" : ""}>${e}</option>`).join("")}</select></label>
+        <label class="completo">${t("Nota")}<input type="text" name="nota" value="${esc(datos.nota || "")}"></label>
       </form>
-      <div class="botones">${nuevo ? "" : `<button class="peligro" id="borrar-panal">Borrar</button>`}<span class="flex"></span>
-        <button class="secundario" id="cancelar">Cancelar</button><button class="primario" id="guardar-panal">Guardar</button></div>`);
+      <div class="botones">${nuevo ? "" : `<button class="peligro" id="borrar-panal">${t("Borrar")}</button>`}<span class="flex"></span>
+        <button class="secundario" id="cancelar">${t("Cancelar")}</button><button class="primario" id="guardar-panal">${t("Guardar")}</button></div>`);
     const listo = () => { cerrar(); if (this._tab === "tomas") this._cargarTomas(); };
     dlg.querySelector("#guardar-panal").onclick = async () => {
       const f = dlg.querySelector("#form-panal");
       const d = { fin: aServicio(f.fin.value), tipo: f.tipo.value };
       if (d.tipo !== "pipi") {
-        if (!f.color.value || !f.consistencia.value) { this._aviso("Para popó elige color y consistencia (o \"No sé\")"); return; }
+        if (!f.color.value || !f.consistencia.value) { this._aviso(t("Para popó elige color y consistencia (o \"No sé\")")); return; }
         d.color = f.color.value; d.consistencia = f.consistencia.value;
       }
       if (f.nota.value.trim()) d.nota = f.nota.value.trim();
-      if (nuevo) await this._accion(() => this._servicio("registrar_panal", { ...d, fuente: "app" }, true), "Pañal agregado" + this._avisoColor(d.color));
-      else await this._accion(() => this._servicio("corregir_panal", { id: p.id, ...d }, true), "Pañal actualizado" + this._avisoColor(d.color));
+      if (nuevo) await this._accion(() => this._servicio("registrar_panal", { ...d, fuente: "app" }, true), t("Pañal agregado") + this._avisoColor(d.color));
+      else await this._accion(() => this._servicio("corregir_panal", { id: p.id, ...d }, true), t("Pañal actualizado") + this._avisoColor(d.color));
       listo();
     };
     const b = dlg.querySelector("#borrar-panal");
     if (b) b.onclick = async () => {
-      if (!confirm("¿Borrar este pañal?")) return;
-      await this._accion(() => this._servicio("borrar_panal", { id: p.id }, true), "Pañal borrado");
+      if (!confirm(t("¿Borrar este pañal?"))) return;
+      await this._accion(() => this._servicio("borrar_panal", { id: p.id }, true), t("Pañal borrado"));
       listo();
     };
   }
@@ -513,26 +530,26 @@ class BebePanel extends HTMLElement {
       const f = r.getElementById("form-nueva");
       const datos = this._leerForm(f, true);
       if (!datos) return;
-      await this._accion(() => this._servicio("registrar_toma", { ...datos, fuente: "app" }, true), "Toma guardada");
+      await this._accion(() => this._servicio("registrar_toma", { ...datos, fuente: "app" }, true), t("Toma guardada"));
       r.getElementById("detalle").open = false;
     });
   }
 
   // ---------- Formulario de toma ----------
-  _formToma(t, id, conNuevo = false) {
+  _formToma(tm, id, conNuevo = false) {
     return `<form class="form" id="form-${id}" onsubmit="return false">
-      <label class="completo">Hora<input type="datetime-local" name="fin" value="${t.fin}" required></label>
-      <label>Tomó (${U()})<input type="number" name="oz_tomadas" step="${PASO()}" min="${PASO()}" max="${MAXC()}" inputmode="decimal" value="${t.oz_tomadas === "" || t.oz_tomadas == null ? "" : cantN(t.oz_tomadas, 2)}" required></label>
-      <label>Tipo<select name="tipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${k === t.tipo ? "selected" : ""}>${v}</option>`).join("")}</select></label>
-      <label class="completo">Nota<input type="text" name="nota" value="${esc(t.nota || "")}" placeholder="opcional"></label>
-      ${conNuevo ? `<label class="check completo"><input type="checkbox" name="nuevo_biberon"> Es de un biberón nuevo</label>` : ""}
+      <label class="completo">${t("Hora")}<input type="datetime-local" name="fin" value="${tm.fin}" required></label>
+      <label>${t("Tomó")} (${U()})<input type="number" name="oz_tomadas" step="${PASO()}" min="${PASO()}" max="${MAXC()}" inputmode="decimal" value="${tm.oz_tomadas === "" || tm.oz_tomadas == null ? "" : cantN(tm.oz_tomadas, 2)}" required></label>
+      <label>${t("Tipo")}<select name="tipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${k === tm.tipo ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+      <label class="completo">${t("Nota")}<input type="text" name="nota" value="${esc(tm.nota || "")}" placeholder="${t("opcional")}"></label>
+      ${conNuevo ? `<label class="check completo"><input type="checkbox" name="nuevo_biberon"> ${t("Es de un biberón nuevo")}</label>` : ""}
     </form>`;
   }
 
   _leerForm(f, conNuevo = false) {
-    if (!f.fin.value) { this._aviso("Indica la hora"); return null; }
+    if (!f.fin.value) { this._aviso(t("Indica la hora")); return null; }
     const oz = aOz(parseFloat(String(f.oz_tomadas.value).replace(",", ".")));
-    if (!(oz > 0 && oz <= 12)) { this._aviso("Indica cuánto tomó"); return null; }
+    if (!(oz > 0 && oz <= 12)) { this._aviso(t("Indica cuánto tomó")); return null; }
     const d = { fin: aServicio(f.fin.value), oz_tomadas: oz, tipo: f.tipo.value };
     if (f.nota.value.trim()) d.nota = f.nota.value.trim();
     if (conNuevo && f.nuevo_biberon && f.nuevo_biberon.checked) d.nuevo_biberon = true;
@@ -550,60 +567,60 @@ class BebePanel extends HTMLElement {
       panales = (await this._servicio("listar_panales", rango, true)).panales;
       biberones = (await this._servicio("listar_biberones",
         { desde: `${fechaISO(sumarDias(desde, -1))} 00:00:00`, hasta: rango.hasta }, true)).biberones;
-    } catch (e) { this._aviso(`Error al cargar: ${e.message}`); }
+    } catch (e) { this._aviso(`${t("Error al cargar")}: ${e.message}`); }
     this._tomasDia = tomas;
     this._bibs = Object.fromEntries(biberones.map((b) => [b.id, b]));
     const grupos = [];
-    tomas.forEach((t) => {
-      let g = grupos.find((x) => x.id === (t.biberon_id || 0));
-      if (!g) { g = { id: t.biberon_id || 0, b: this._bibs[t.biberon_id], tomas: [] }; grupos.push(g); }
-      g.tomas.push(t);
+    tomas.forEach((tm) => {
+      let g = grupos.find((x) => x.id === (tm.biberon_id || 0));
+      if (!g) { g = { id: tm.biberon_id || 0, b: this._bibs[tm.biberon_id], tomas: [] }; grupos.push(g); }
+      g.tomas.push(tm);
     });
-    const total = tomas.reduce((s, t) => s + t.oz_tomadas, 0);
+    const total = tomas.reduce((s, tm) => s + tm.oz_tomadas, 0);
     const meta = this._num("meta_oz_dia");
     const esHoy = fechaISO(this._dia) === fechaISO(new Date());
-    const ESTADO = { abierto: "En curso", terminado: "Terminado", incompleto: "Incompleto" };
+    const ESTADO = { abierto: t("En curso"), terminado: t("Terminado"), incompleto: t("Incompleto") };
     cont.innerHTML = `
       <div class="navdia">
-        <button id="prev" aria-label="Día anterior">‹</button>
+        <button id="prev" aria-label="${t("Día anterior")}">‹</button>
         <input type="date" id="fecha" value="${fechaISO(this._dia)}" max="${fechaISO(new Date())}">
-        <button id="next" aria-label="Día siguiente" ${esHoy ? "disabled" : ""}>›</button>
-        ${esHoy ? "" : `<button id="hoy" class="chip">Hoy</button>`}
+        <button id="next" aria-label="${t("Día siguiente")}" ${esHoy ? "disabled" : ""}>›</button>
+        ${esHoy ? "" : `<button id="hoy" class="chip">${t("Hoy")}</button>`}
       </div>
       <section class="tarjeta">
         <div class="resumen-dia">
-          <div><b>${num(total, 1)}</b> oz${meta ? ` de ${num(meta, 1)}` : ""}</div>
-          <div><b>${tomas.length}</b> tomas</div>
-          <div><b>${grupos.filter((g) => g.id).length}</b> biberones</div>
+          <div><b>${cantN(total, 1)}</b> ${U()}${meta ? ` ${t("de")} ${cantN(meta, 1)}` : ""}</div>
+          <div><b>${tomas.length}</b> ${t("tomas")}</div>
+          <div><b>${grupos.filter((g) => g.id).length}</b> ${t("biberones")}</div>
         </div>
         ${grupos.length ? grupos.slice().reverse().map((g) => `
           <div class="grupo">
             ${g.b ? `<div class="bib-cab" data-bib="${g.b.id}">
                 <span>🍼 <b>${cantN(g.b.consumido, 2)} / ${cant(g.b.oz, 2)}</b> ${TIPOS[g.b.tipo] || ""}</span>
                 <span class="badge ${g.b.estado}">${ESTADO[g.b.estado] || g.b.estado}</span>
-                <span class="sub">${g.b.estado === "incompleto" ? `se desecharon ${cant(g.b.desechado, 2)}` : g.b.estado === "abierto" ? `quedan ${cant(g.b.restante, 2)}` : ""}</span>
-              </div>` : `<div class="bib-cab"><span class="sub">Sin biberón</span></div>`}
-            <ul class="lista">${g.tomas.slice().reverse().map((t) => `
-              <li data-id="${t.id}">
-                <span class="hora">${hora(t.fin)}</span>
-                <span class="oz">${cant(t.oz_tomadas, 2)}</span>
-                <span class="meta-t">${TIPOS[t.tipo] || t.tipo}${t.nota ? ` · ${esc(t.nota)}` : ""}</span>
-                <span class="badge ${t.confianza}">${CONFIANZAS[t.confianza] || t.confianza}</span>
-                <span class="fuente">${FUENTES[t.fuente] || esc(t.fuente || "")}</span>
+                <span class="sub">${g.b.estado === "incompleto" ? t("se desecharon {c}", { c: cant(g.b.desechado, 2) }) : g.b.estado === "abierto" ? t("quedan {c}", { c: cant(g.b.restante, 2) }) : ""}</span>
+              </div>` : `<div class="bib-cab"><span class="sub">${t("Sin biberón")}</span></div>`}
+            <ul class="lista">${g.tomas.slice().reverse().map((tm) => `
+              <li data-id="${tm.id}">
+                <span class="hora">${hora(tm.fin)}</span>
+                <span class="oz">${cant(tm.oz_tomadas, 2)}</span>
+                <span class="meta-t">${TIPOS[tm.tipo] || tm.tipo}${tm.nota ? ` · ${esc(tm.nota)}` : ""}</span>
+                <span class="badge ${tm.confianza}">${CONFIANZAS[tm.confianza] || tm.confianza}</span>
+                <span class="fuente">${FUENTES[tm.fuente] || esc(tm.fuente || "")}</span>
               </li>`).join("")}</ul>
-          </div>`).join("") : `<p class="vacio">Sin tomas este día.</p>`}
-        <button class="secundario" id="agregar">+ Agregar toma a este día</button>
+          </div>`).join("") : `<p class="vacio">${t("Sin tomas este día.")}</p>`}
+        <button class="secundario" id="agregar">${t("+ Agregar toma a este día")}</button>
       </section>
       <section class="tarjeta">
-        <div class="fila-titulo"><h2>🧷 Pañales del día</h2><span class="sub">${panales.length} · 💧 ${panales.filter((x) => x.tipo === "pipi").length} · 💩 ${panales.filter((x) => x.tipo === "popo").length} · ambos ${panales.filter((x) => x.tipo === "ambos").length}</span></div>
+        <div class="fila-titulo"><h2>🧷 ${t("Pañales del día")}</h2><span class="sub">${panales.length} · 💧 ${panales.filter((x) => x.tipo === "pipi").length} · 💩 ${panales.filter((x) => x.tipo === "popo").length} · ${t("ambos")} ${panales.filter((x) => x.tipo === "ambos").length}</span></div>
         ${panales.length ? `<ul class="lista">${panales.slice().reverse().map((x) => `
           <li data-panal="${x.id}">
             <span class="hora">${hora(x.fin)}</span>
             <span class="oz">${TIPOS_PANAL[x.tipo] || x.tipo}</span>
             <span class="meta-t">${x.color ? `${NOMBRE_COLOR[x.color] || x.color} · ${NOMBRE_CONS[x.consistencia] || x.consistencia || ""}` : ""}${x.nota ? ` · ${esc(x.nota)}` : ""}</span>
             <span class="fuente">${esc(x.registrado_por || "")}</span>
-          </li>`).join("")}</ul>` : `<p class="vacio">Sin pañales este día.</p>`}
-        <button class="secundario" id="agregar-panal">+ Agregar pañal a este día</button>
+          </li>`).join("")}</ul>` : `<p class="vacio">${t("Sin pañales este día.")}</p>`}
+        <button class="secundario" id="agregar-panal">${t("+ Agregar pañal a este día")}</button>
       </section>`;
     const $ = (id) => cont.querySelector(`#${id}`);
     $("prev").onclick = () => { this._dia = sumarDias(this._dia, -1); this._cargarTomas(); };
@@ -613,7 +630,7 @@ class BebePanel extends HTMLElement {
     }
     $("fecha").onchange = (e) => { if (e.target.value) { this._dia = inicioDia(new Date(e.target.value + "T00:00")); this._cargarTomas(); } };
     cont.querySelectorAll("li[data-id]").forEach((li) => {
-      li.onclick = () => this._editarToma(this._tomasDia.find((t) => t.id === Number(li.dataset.id)));
+      li.onclick = () => this._editarToma(this._tomasDia.find((tm) => tm.id === Number(li.dataset.id)));
     });
     cont.querySelectorAll("[data-bib]").forEach((el) => {
       el.onclick = () => this._editarBiberon(this._bibs[Number(el.dataset.bib)]);
@@ -641,26 +658,26 @@ class BebePanel extends HTMLElement {
     return { dlg, cerrar };
   }
 
-  _editarToma(t, base) {
-    const nueva = !t;
+  _editarToma(tm, base) {
+    const nueva = !tm;
     const datos = nueva
       ? { fin: aInputLocal(base), oz_tomadas: "", tipo: "formula" }
-      : { ...t, fin: aInputLocal(new Date(t.fin)) };
+      : { ...tm, fin: aInputLocal(new Date(tm.fin)) };
     const { dlg, cerrar } = this._modal(`
-      <h2>${nueva ? "Nueva toma" : `Toma de las ${hora(t.fin)}`}</h2>
+      <h2>${nueva ? t("Nueva toma") : t("Toma de las {h}", { h: hora(tm.fin) })}</h2>
       ${this._formToma(datos, "edit", nueva)}
-      ${nueva ? "" : `<label class="conf">Confianza<select id="confianza">${Object.entries(CONFIANZAS)
-        .map(([k, v]) => `<option value="${k}" ${k === t.confianza ? "selected" : ""}>${v}</option>`).join("")}</select></label>
-      <p class="sub">Registrada por ${esc(t.registrado_por || "—")} · ${FUENTES[t.fuente] || esc(t.fuente || "")}</p>
+      ${nueva ? "" : `<label class="conf">${t("Confianza")}<select id="confianza">${Object.entries(CONFIANZAS)
+        .map(([k, v]) => `<option value="${k}" ${k === tm.confianza ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+      <p class="sub">${t("Registrada por")} ${esc(tm.registrado_por || "—")} · ${FUENTES[tm.fuente] || esc(tm.fuente || "")}</p>
       <div class="botones mover">
-        <button class="secundario" id="mover-nuevo">Mover a biberón nuevo</button>
-        <button class="secundario" id="mover-anterior">Unir al biberón anterior</button>
+        <button class="secundario" id="mover-nuevo">${t("Mover a biberón nuevo")}</button>
+        <button class="secundario" id="mover-anterior">${t("Unir al biberón anterior")}</button>
       </div>`}
       <div class="botones">
-        ${nueva ? "" : `<button class="peligro" id="borrar">Borrar</button>`}
+        ${nueva ? "" : `<button class="peligro" id="borrar">${t("Borrar")}</button>`}
         <span class="flex"></span>
-        <button class="secundario" id="cancelar">Cancelar</button>
-        <button class="primario" id="guardar">Guardar</button>
+        <button class="secundario" id="cancelar">${t("Cancelar")}</button>
+        <button class="primario" id="guardar">${t("Guardar")}</button>
       </div>`);
     const f = dlg.querySelector("#form-edit");
     const conf = dlg.querySelector("#confianza");
@@ -669,27 +686,27 @@ class BebePanel extends HTMLElement {
     dlg.querySelector("#guardar").onclick = async () => {
       const d = this._leerForm(f, nueva); if (!d) return;
       if (nueva) {
-        await this._accion(() => this._servicio("registrar_toma", { ...d, fuente: "app" }, true), "Toma agregada");
+        await this._accion(() => this._servicio("registrar_toma", { ...d, fuente: "app" }, true), t("Toma agregada"));
       } else {
         d.confianza = conf.value;
         if (!d.nota) d.nota = "";
-        await this._accion(() => this._servicio("corregir_toma", { id: t.id, ...d }, true), "Toma actualizada");
+        await this._accion(() => this._servicio("corregir_toma", { id: tm.id, ...d }, true), t("Toma actualizada"));
       }
       listo();
     };
     if (nueva) return;
     dlg.querySelector("#borrar").onclick = async () => {
-      if (!confirm(`¿Borrar la toma de las ${hora(t.fin)} (${cant(t.oz_tomadas, 2)})?`)) return;
-      await this._accion(() => this._servicio("borrar_toma", { id: t.id }, true), "Toma borrada");
+      if (!confirm(t("¿Borrar la toma de las {h} ({c})?", { h: hora(tm.fin), c: cant(tm.oz_tomadas, 2) }))) return;
+      await this._accion(() => this._servicio("borrar_toma", { id: tm.id }, true), t("Toma borrada"));
       listo();
     };
     dlg.querySelector("#mover-nuevo").onclick = async () => {
-      await this._accion(() => this._servicio("corregir_toma", { id: t.id, mover: "nuevo" }, true),
-        "Movida (con las siguientes del mismo biberón) a un biberón nuevo");
+      await this._accion(() => this._servicio("corregir_toma", { id: tm.id, mover: "nuevo" }, true),
+        t("Movida (con las siguientes del mismo biberón) a un biberón nuevo"));
       listo();
     };
     dlg.querySelector("#mover-anterior").onclick = async () => {
-      await this._accion(() => this._servicio("corregir_toma", { id: t.id, mover: "anterior" }, true), "Unida al biberón anterior");
+      await this._accion(() => this._servicio("corregir_toma", { id: tm.id, mover: "anterior" }, true), t("Unida al biberón anterior"));
       listo();
     };
   }
@@ -697,33 +714,33 @@ class BebePanel extends HTMLElement {
   _editarBiberon(b) {
     if (!b) return;
     const { dlg, cerrar } = this._modal(`
-      <h2>Biberón de las ${hora(b.preparado)}</h2>
-      <p class="sub">${cantN(b.consumido, 2)} de ${cant(b.oz, 2)} en ${b.n_tomas} toma${b.n_tomas === 1 ? "" : "s"}
+      <h2>${t("Biberón de las {h}", { h: hora(b.preparado) })}</h2>
+      <p class="sub">${t(b.n_tomas === 1 ? "{a} de {b} en 1 toma" : "{a} de {b} en {n} tomas", { a: cantN(b.consumido, 2), b: cant(b.oz, 2), n: b.n_tomas })}
         ${b.primera_toma ? ` · ${hora(b.primera_toma)}–${hora(b.ultima_toma)}` : ""}</p>
       <form class="form" id="form-bib" onsubmit="return false">
-        <label>Tamaño (${U()})<input type="number" name="oz" step="${PASO()}" min="${PASO()}" max="${MAXC()}" inputmode="decimal" value="${cantN(b.oz, 2)}"></label>
-        <label>Tipo<select name="tipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${k === b.tipo ? "selected" : ""}>${v}</option>`).join("")}</select></label>
-        <label class="completo">Nota<input type="text" name="nota" value="${esc(b.nota || "")}"></label>
+        <label>${t("Tamaño")} (${U()})<input type="number" name="oz" step="${PASO()}" min="${PASO()}" max="${MAXC()}" inputmode="decimal" value="${cantN(b.oz, 2)}"></label>
+        <label>${t("Tipo")}<select name="tipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${k === b.tipo ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+        <label class="completo">${t("Nota")}<input type="text" name="nota" value="${esc(b.nota || "")}"></label>
       </form>
       <div class="botones">
-        ${b.estado === "abierto" ? `<button class="peligro" id="cerrar-bib">Cerrar (desechar ${cant(b.restante, 2)})</button>` : ""}
-        ${b.estado === "incompleto" ? `<button class="secundario" id="reabrir-bib">Reabrir</button>` : ""}
+        ${b.estado === "abierto" ? `<button class="peligro" id="cerrar-bib">${t("Cerrar (desechar {c})", { c: cant(b.restante, 2) })}</button>` : ""}
+        ${b.estado === "incompleto" ? `<button class="secundario" id="reabrir-bib">${t("Reabrir")}</button>` : ""}
         <span class="flex"></span>
-        <button class="secundario" id="cancelar">Cancelar</button>
-        <button class="primario" id="guardar-bib">Guardar</button>
+        <button class="secundario" id="cancelar">${t("Cancelar")}</button>
+        <button class="primario" id="guardar-bib">${t("Guardar")}</button>
       </div>`);
     const listo = () => { cerrar(); this._cargarTomas(); };
     dlg.querySelector("#guardar-bib").onclick = async () => {
       const f = dlg.querySelector("#form-bib");
       const oz = aOz(parseFloat(f.oz.value));
       await this._accion(() => this._servicio("corregir_biberon",
-        { id: b.id, oz, tipo: f.tipo.value, nota: f.nota.value.trim() }, true), "Biberón actualizado");
+        { id: b.id, oz, tipo: f.tipo.value, nota: f.nota.value.trim() }, true), t("Biberón actualizado"));
       listo();
     };
     const c = dlg.querySelector("#cerrar-bib");
-    if (c) c.onclick = async () => { await this._accion(() => this._servicio("cerrar_biberon", { id: b.id }, true), "Biberón cerrado"); listo(); };
+    if (c) c.onclick = async () => { await this._accion(() => this._servicio("cerrar_biberon", { id: b.id }, true), t("Biberón cerrado")); listo(); };
     const ro = dlg.querySelector("#reabrir-bib");
-    if (ro) ro.onclick = async () => { await this._accion(() => this._servicio("corregir_biberon", { id: b.id, reabrir: true }, true), "Biberón reabierto"); listo(); };
+    if (ro) ro.onclick = async () => { await this._accion(() => this._servicio("corregir_biberon", { id: b.id, reabrir: true }, true), t("Biberón reabierto")); listo(); };
   }
 
   // ---------- Ajustes ----------
@@ -731,29 +748,29 @@ class BebePanel extends HTMLElement {
     const v = (k) => this._num(k) ?? "";
     return `
       <section class="tarjeta">
-        <h2>Biberón e indicación del pediatra</h2>
+        <h2>${t("Biberón e indicación del pediatra")}</h2>
         <form class="form" id="form-ajustes" onsubmit="return false">
-          <label>Oz por biberón <small>(se guarda en oz)</small>
+          <label>${t("Oz por biberón")} <small>${t("(se guarda en oz)")}</small>
             <input type="number" name="oz_por_biberon" step="0.5" min="0.5" max="10" inputmode="decimal" value="${v("oz_por_biberon")}">
-            <span class="ayuda">Tamaño de cada biberón nuevo.</span></label>
-          <label>Fórmula empezada: límite (h)
+            <span class="ayuda">${t("Tamaño de cada biberón nuevo.")}</span></label>
+          <label>${t("Fórmula empezada: límite (h)")}
             <input type="number" name="limite_biberon" step="0.25" min="0.5" max="4" inputmode="decimal" value="${v("limite_biberon")}">
-            <span class="ayuda">Después de esto se sugiere preparar otro.</span></label>
-          <label>Materna empezada: límite (h)
+            <span class="ayuda">${t("Después de esto se sugiere preparar otro.")}</span></label>
+          <label>${t("Materna empezada: límite (h)")}
             <input type="number" name="limite_materna" step="0.25" min="0.5" max="4" inputmode="decimal" value="${v("limite_materna")}"></label>
-          <label>Materna a temp. ambiente (h)
+          <label>${t("Materna a temp. ambiente (h)")}
             <input type="number" name="caducidad_ambiente" step="0.5" min="0.5" max="8" inputmode="decimal" value="${v("caducidad_ambiente")}"></label>
-          <label>Materna en refrigerador (días)
+          <label>${t("Materna en refrigerador (días)")}
             <input type="number" name="caducidad_refri" step="0.5" min="0.5" max="8" inputmode="decimal" value="${v("caducidad_refri")}"></label>
-          <label>Meta oz por toma
+          <label>${t("Meta oz por toma")}
             <input type="number" name="meta_oz_toma" step="0.5" min="0.5" max="10" inputmode="decimal" value="${v("meta_oz_toma")}"></label>
-          <label>Cada cuántas horas
+          <label>${t("Cada cuántas horas")}
             <input type="number" name="intervalo_indicado" step="0.5" min="1" max="6" inputmode="decimal" value="${v("intervalo_indicado")}"></label>
         </form>
         <p class="sub" id="prevista"></p>
-        <button class="primario" id="guardar-ajustes">Guardar ajustes</button>
+        <button class="primario" id="guardar-ajustes">${t("Guardar ajustes")}</button>
       </section>
-      <section class="tarjeta"><h2>Lo que dicen los últimos 7 días</h2><div id="sugerencia" class="sub"></div></section>`;
+      <section class="tarjeta"><h2>${t("Lo que dicen los últimos 7 días")}</h2><div id="sugerencia" class="sub"></div></section>`;
   }
 
   _eventosAjustes() {
@@ -761,7 +778,7 @@ class BebePanel extends HTMLElement {
     const prev = () => {
       const m = parseFloat(f.meta_oz_toma.value), i = parseFloat(f.intervalo_indicado.value);
       this.shadowRoot.getElementById("prevista").textContent = (m && i)
-        ? `Meta diaria: ${cant(m * 24 / i, 1)} (${num(24 / i, 1)} tomas al día). El recordatorio sonará ${num(i, 1)} h después de cada toma.`
+        ? t("Meta diaria: {c} ({n} tomas al día). El recordatorio sonará {h} h después de cada toma.", { c: cant(m * 24 / i, 1), n: num(24 / i, 1), h: num(i, 1) })
         : "";
     };
     f.addEventListener("input", prev); prev();
@@ -769,12 +786,12 @@ class BebePanel extends HTMLElement {
       const cambios = ["oz_por_biberon", "limite_biberon", "limite_materna", "caducidad_ambiente", "caducidad_refri",
         "meta_oz_toma", "intervalo_indicado"]
         .filter((k) => f[k].value !== "" && Number(f[k].value) !== this._num(k));
-      if (!cambios.length) { this._aviso("Sin cambios"); return; }
+      if (!cambios.length) { this._aviso(t("Sin cambios")); return; }
       await this._accion(async () => {
         for (const k of cambios) {
           await this._hass.callService("number", "set_value", { entity_id: this._cfg.entidades[k], value: Number(f[k].value) });
         }
-      }, "Ajustes guardados");
+      }, t("Ajustes guardados"));
     };
     this._pintarSugerencia();
   }
@@ -783,14 +800,14 @@ class BebePanel extends HTMLElement {
     const el = this.shadowRoot.getElementById("sugerencia"); if (!el) return;
     const ozToma = this._num("oz_por_toma"), porDia = this._num("tomas_por_dia"), pct = this._num("pct_terminados");
     const desechado = this._num("desechado_7d"), ozBib = this._num("oz_por_biberon"), meta = this._num("meta_oz_toma");
-    if (ozToma === null) { el.textContent = "Todavía no hay suficientes registros."; return; }
-    const lineas = [`Toma en promedio <b>${cant(ozToma, 2)}</b> por toma, unas <b>${num(porDia, 1)}</b> veces al día.`];
-    if (pct !== null) lineas.push(`Terminó el <b>${pct}%</b> de sus biberones; se desecharon <b>${cant(desechado, 1)}</b> de fórmula.`);
-    if (pct !== null && pct < 50 && ozBib) lineas.push(`Muchos biberones quedan incompletos: podrían preparar menos (≈${cant(Math.max(0.5, ozBib - 0.5), 1)}) para desperdiciar menos.`);
-    if (pct !== null && pct >= 80) lineas.push("Se termina casi todos sus biberones: buen dato para comentar con el pediatra por si conviene aumentar.");
-    if (meta && ozToma < meta * 0.6) lineas.push(`Come en tomas pequeñas (${cant(ozToma, 2)} vs meta ${num(meta, 1)}): es normal que coma más seguido.`);
+    if (ozToma === null) { el.textContent = t("Todavía no hay suficientes registros."); return; }
+    const lineas = [t("Toma en promedio <b>{c}</b> por toma, unas <b>{n}</b> veces al día.", { c: cant(ozToma, 2), n: num(porDia, 1) })];
+    if (pct !== null) lineas.push(t("Terminó el <b>{p}%</b> de sus biberones; se desecharon <b>{c}</b> de fórmula.", { p: pct, c: cant(desechado, 1) }));
+    if (pct !== null && pct < 50 && ozBib) lineas.push(t("Muchos biberones quedan incompletos: podrían preparar menos (≈{c}) para desperdiciar menos.", { c: cant(Math.max(0.5, ozBib - 0.5), 1) }));
+    if (pct !== null && pct >= 80) lineas.push(t("Se termina casi todos sus biberones: buen dato para comentar con el pediatra por si conviene aumentar."));
+    if (meta && ozToma < meta * 0.6) lineas.push(t("Come en tomas pequeñas ({c} vs meta {m}): es normal que coma más seguido.", { c: cant(ozToma, 2), m: cant(meta, 1) }));
     el.innerHTML = lineas.map((l) => `<p>${l}</p>`).join("")
-      + `<p class="ayuda">Son referencias de tus registros; cualquier cambio de cantidad, consúltalo con su pediatra.</p>`;
+      + `<p class="ayuda">${t("Son referencias de tus registros; cualquier cambio de cantidad, consúltalo con su pediatra.")}</p>`;
   }
 
   // ---------- Leche materna: reserva y extracciones ----------
@@ -798,31 +815,31 @@ class BebePanel extends HTMLElement {
     return `
       <section class="kpis" id="kpis-materna"></section>
       <section class="tarjeta">
-        <div class="fila-titulo"><h2>Reserva</h2><span class="sub" id="reserva-total"></span></div>
+        <div class="fila-titulo"><h2>${t("Reserva")}</h2><span class="sub" id="reserva-total"></span></div>
         <div id="reserva"></div>
         <details id="det-guardar">
-          <summary>＋ Guardar biberón de leche materna</summary>
+          <summary>${t("＋ Guardar biberón de leche materna")}</summary>
           <form class="form" id="form-guardar" onsubmit="return false">
-            <label>Cantidad (${U()})<input type="number" name="oz" step="${PASO()}" min="${PASO()}" max="${MAXC()}" inputmode="decimal" required></label>
-            <label>Dónde<select name="ubicacion"><option value="refrigerador">Refrigerador</option><option value="ambiente">Temperatura ambiente</option></select></label>
-            <label class="completo">Se hizo a las<input type="datetime-local" name="hecho" value="${aInputLocal(new Date())}"></label>
+            <label>${t("Cantidad")} (${U()})<input type="number" name="oz" step="${PASO()}" min="${PASO()}" max="${MAXC()}" inputmode="decimal" required></label>
+            <label>${t("Dónde")}<select name="ubicacion"><option value="refrigerador">${t("Refrigerador")}</option><option value="ambiente">${t("Temperatura ambiente")}</option></select></label>
+            <label class="completo">${t("Se hizo a las")}<input type="datetime-local" name="hecho" value="${aInputLocal(new Date())}"></label>
           </form>
-          <button class="primario" id="btn-guardar">Guardar en reserva</button>
+          <button class="primario" id="btn-guardar">${t("Guardar en reserva")}</button>
         </details>
       </section>
       <section class="tarjeta">
-        <h2>Registrar extracción</h2>
+        <h2>${t("Registrar extracción")}</h2>
         <form class="form" id="form-ext" onsubmit="return false">
-          <label class="completo">Terminó a las<input type="datetime-local" name="fin" value="${aInputLocal(new Date())}"></label>
-          <label>Izquierdo (${U()})<input type="number" name="oz_izq" step="${PASO()}" min="0" max="${MAXC()}" inputmode="decimal"></label>
-          <label>Derecho (${U()})<input type="number" name="oz_der" step="${PASO()}" min="0" max="${MAXC()}" inputmode="decimal"></label>
-          <label>Duración (min)<input type="number" name="duracion_min" step="1" min="0" max="180" inputmode="numeric"></label>
-          <label>Dónde se guarda<select name="ubicacion"><option value="refrigerador">Refrigerador</option><option value="ambiente">Temperatura ambiente</option></select></label>
-          <label class="check completo"><input type="checkbox" name="guardar" checked> Guardar en biberones de reserva</label>
-          <label class="completo">Repartir en biberones (opcional)<input type="text" name="reparto" placeholder="ej. 2 + 1.5  (vacío = un biberón con todo)"></label>
+          <label class="completo">${t("Terminó a las")}<input type="datetime-local" name="fin" value="${aInputLocal(new Date())}"></label>
+          <label>${t("Izquierdo")} (${U()})<input type="number" name="oz_izq" step="${PASO()}" min="0" max="${MAXC()}" inputmode="decimal"></label>
+          <label>${t("Derecho")} (${U()})<input type="number" name="oz_der" step="${PASO()}" min="0" max="${MAXC()}" inputmode="decimal"></label>
+          <label>${t("Duración (min)")}<input type="number" name="duracion_min" step="1" min="0" max="180" inputmode="numeric"></label>
+          <label>${t("Dónde se guarda")}<select name="ubicacion"><option value="refrigerador">${t("Refrigerador")}</option><option value="ambiente">${t("Temperatura ambiente")}</option></select></label>
+          <label class="check completo"><input type="checkbox" name="guardar" checked> ${t("Guardar en biberones de reserva")}</label>
+          <label class="completo">${t("Repartir en biberones (opcional)")}<input type="text" name="reparto" placeholder="${t("ej. 2 + 1.5  (vacío = un biberón con todo)")}"></label>
         </form>
-        <button class="primario" id="btn-ext">Guardar extracción</button>
-        <h2 class="sep">Extracciones recientes</h2>
+        <button class="primario" id="btn-ext">${t("Guardar extracción")}</button>
+        <h2 class="sep">${t("Extracciones recientes")}</h2>
         <div id="extracciones"></div>
       </section>`;
   }
@@ -833,14 +850,14 @@ class BebePanel extends HTMLElement {
     const vig = s ? s.attributes.vigentes : 0, caducados = s ? s.attributes.caducados : 0;
     const mh = this._num("materna_hoy") ?? 0, fh = this._num("formula_hoy") ?? 0;
     k.innerHTML = `
-      <div class="kpi"><div class="etq">En reserva</div><div class="num">${cantN(this._num("reserva_oz"), 1)} <small>${U()}</small></div>
-        <div class="sub">${vig} biberón${vig === 1 ? "" : "es"}${caducados ? ` · <span class="rojo">${caducados} caducado${caducados === 1 ? "" : "s"}</span>` : ""}</div></div>
-      <div class="kpi"><div class="etq">Próxima caducidad</div><div class="num sm">${cad ? `${hora(cad)}` : "—"}</div>
+      <div class="kpi"><div class="etq">${t("En reserva")}</div><div class="num">${cantN(this._num("reserva_oz"), 1)} <small>${U()}</small></div>
+        <div class="sub">${t(vig === 1 ? "1 biberón" : "{n} biberones", { n: vig })}${caducados ? ` · <span class="rojo">${t(caducados === 1 ? "1 caducado" : "{n} caducados", { n: caducados })}</span>` : ""}</div></div>
+      <div class="kpi"><div class="etq">${t("Próxima caducidad")}</div><div class="num sm">${cad ? `${hora(cad)}` : "—"}</div>
         <div class="sub">${cad ? relativo(cad) : ""}</div></div>
-      <div class="kpi"><div class="etq">Extraído hoy</div><div class="num">${cantN(this._num("extraido_hoy"), 1)} <small>${U()}</small></div>
-        <div class="sub">promedio ${cant(this._num("extraido_dia"), 1)}/día (7 d)</div></div>
-      <div class="kpi"><div class="etq">Tomó hoy</div><div class="num sm">${num(mh, 1)} materna · ${num(fh, 1)} fórmula</div>
-        <div class="sub">${mh + fh ? Math.round(mh / (mh + fh) * 100) : 0}% materna · desechada 7 d: ${cant(this._num("materna_desechada_7d"), 1)}</div></div>`;
+      <div class="kpi"><div class="etq">${t("Extraído hoy")}</div><div class="num">${cantN(this._num("extraido_hoy"), 1)} <small>${U()}</small></div>
+        <div class="sub">${t("promedio {c}/día (7 d)", { c: cant(this._num("extraido_dia"), 1) })}</div></div>
+      <div class="kpi"><div class="etq">${t("Tomó hoy")}</div><div class="num sm">${t("{a} materna · {b} fórmula", { a: cantN(mh, 1), b: cantN(fh, 1) })}</div>
+        <div class="sub">${t("{p}% materna · desechada 7 d: {c}", { p: mh + fh ? Math.round(mh / (mh + fh) * 100) : 0, c: cant(this._num("materna_desechada_7d"), 1) })}</div></div>`;
   }
 
   async _cargarMaterna() {
@@ -851,33 +868,33 @@ class BebePanel extends HTMLElement {
       reservas = (await this._servicio("listar_reservas", {}, true)).reservas;
       ext = (await this._servicio("listar_extracciones",
         { desde: `${fechaISO(sumarDias(hoy, -2))} 00:00:00`, hasta: `${fechaISO(sumarDias(hoy, 1))} 00:00:00` }, true)).extracciones;
-    } catch (e) { this._aviso(`Error al cargar: ${e.message}`); }
+    } catch (e) { this._aviso(`${t("Error al cargar")}: ${e.message}`); }
     const r = this.shadowRoot;
-    const LUGAR = { refrigerador: "Refrigerador", ambiente: "Ambiente" };
+    const LUGAR = { refrigerador: t("Refrigerador"), ambiente: t("Ambiente") };
     const total = reservas.filter((b) => !b.caducado).reduce((s, b) => s + b.oz, 0);
-    r.getElementById("reserva-total").textContent = reservas.length ? `${cant(total, 1)} vigentes` : "";
+    r.getElementById("reserva-total").textContent = reservas.length ? t("{c} vigentes", { c: cant(total, 1) }) : "";
     r.getElementById("reserva").innerHTML = reservas.length ? `<ul class="lista">${reservas.map((b, i) => {
       const d = new Date(b.hecho || b.preparado);
       const pronto = b.caduca && !b.caducado && (new Date(b.caduca) - Date.now()) < 6 * 3600 * 1000;
       return `<li class="reserva ${b.caducado ? "caducada" : ""}">
         <span class="hora">${cant(b.oz, 2)}</span>
         <span class="oz">${d.getDate()} ${MESES[d.getMonth()]} ${hora(b.hecho || b.preparado)} · <span class="badge ${b.ubicacion}">${LUGAR[b.ubicacion] || "—"}</span></span>
-        <span class="meta-t ${b.caducado ? "rojo" : pronto ? "naranja" : ""}">${b.caducado ? `Caducó ${relativo(b.caduca)}` : b.caduca ? `Caduca ${relativo(b.caduca)}` : ""}${i === 0 && !b.caducado ? " · la más antigua" : ""}</span>
+        <span class="meta-t ${b.caducado ? "rojo" : pronto ? "naranja" : ""}">${b.caducado ? `${t("Caducó")} ${relativo(b.caduca)}` : b.caduca ? `${t("Caduca")} ${relativo(b.caduca)}` : ""}${i === 0 && !b.caducado ? ` · ${t("la más antigua")}` : ""}</span>
         <span class="acciones">
-          <button class="chip" data-usar="${b.id}" ${b.caducado ? "disabled" : ""}>Usar</button>
-          <button class="chip" data-mover="${b.id}" data-a="${b.ubicacion === "refrigerador" ? "ambiente" : "refrigerador"}">${b.ubicacion === "refrigerador" ? "A ambiente" : "Al refri"}</button>
-          <button class="chip peligro-chip" data-descartar="${b.id}">Desechar</button>
+          <button class="chip" data-usar="${b.id}" ${b.caducado ? "disabled" : ""}>${t("Usar")}</button>
+          <button class="chip" data-mover="${b.id}" data-a="${b.ubicacion === "refrigerador" ? "ambiente" : "refrigerador"}">${b.ubicacion === "refrigerador" ? t("A ambiente") : t("Al refri")}</button>
+          <button class="chip peligro-chip" data-descartar="${b.id}">${t("Desechar")}</button>
         </span>
       </li>`;
-    }).join("")}</ul>` : `<p class="vacio">No hay leche materna en reserva.</p>`;
+    }).join("")}</ul>` : `<p class="vacio">${t("No hay leche materna en reserva.")}</p>`;
     r.querySelectorAll("[data-usar]").forEach((b) => b.onclick = () => this._usarReserva(Number(b.dataset.usar)));
     r.querySelectorAll("[data-mover]").forEach((b) => b.onclick = async () => {
-      await this._accion(() => this._servicio("mover_reserva", { id: Number(b.dataset.mover), ubicacion: b.dataset.a }, true), "Movido");
+      await this._accion(() => this._servicio("mover_reserva", { id: Number(b.dataset.mover), ubicacion: b.dataset.a }, true), t("Movido"));
       this._cargarMaterna();
     });
     r.querySelectorAll("[data-descartar]").forEach((b) => b.onclick = async () => {
-      if (!confirm("¿Desechar este biberón de leche materna?")) return;
-      await this._accion(() => this._servicio("descartar_reserva", { id: Number(b.dataset.descartar) }, true), "Desechado");
+      if (!confirm(t("¿Desechar este biberón de leche materna?"))) return;
+      await this._accion(() => this._servicio("descartar_reserva", { id: Number(b.dataset.descartar) }, true), t("Desechado"));
       this._cargarMaterna();
     });
     r.getElementById("extracciones").innerHTML = ext.length ? `<ul class="lista">${ext.slice().reverse().map((e) => {
@@ -885,13 +902,13 @@ class BebePanel extends HTMLElement {
       return `<li class="medida">
         <span class="hora">${hora(e.fin)}</span>
         <span class="oz">${cant(e.oz_total, 2)}</span>
-        <span class="meta-t">${DIAS[d.getDay()]} ${d.getDate()} · izq ${num(e.oz_izq, 2)} · der ${num(e.oz_der, 2)}${e.duracion_min ? ` · ${num(e.duracion_min, 0)} min` : ""}</span>
-        <button class="icono" data-borrar-ext="${e.id}" aria-label="Borrar">✕</button>
+        <span class="meta-t">${DIAS[d.getDay()]} ${d.getDate()} · ${t("izq")} ${cantN(e.oz_izq, 2)} · ${t("der")} ${cantN(e.oz_der, 2)}${e.duracion_min ? ` · ${num(e.duracion_min, 0)} min` : ""}</span>
+        <button class="icono" data-borrar-ext="${e.id}" aria-label="${t("Borrar")}">✕</button>
       </li>`;
-    }).join("")}</ul>` : `<p class="vacio">Sin extracciones en los últimos 3 días.</p>`;
+    }).join("")}</ul>` : `<p class="vacio">${t("Sin extracciones en los últimos 3 días.")}</p>`;
     r.querySelectorAll("[data-borrar-ext]").forEach((b) => b.onclick = async () => {
-      if (!confirm("¿Borrar esta extracción? También se quitan sus biberones de reserva sin usar.")) return;
-      await this._accion(() => this._servicio("borrar_extraccion", { id: Number(b.dataset.borrarExt) }, true), "Extracción borrada");
+      if (!confirm(t("¿Borrar esta extracción? También se quitan sus biberones de reserva sin usar."))) return;
+      await this._accion(() => this._servicio("borrar_extraccion", { id: Number(b.dataset.borrarExt) }, true), t("Extracción borrada"));
       this._cargarMaterna();
     });
   }
@@ -901,9 +918,9 @@ class BebePanel extends HTMLElement {
     r.getElementById("btn-guardar").onclick = async () => {
       const f = r.getElementById("form-guardar");
       const oz = aOz(parseFloat(String(f.oz.value).replace(",", ".")));
-      if (!(oz > 0)) { this._aviso("Indica la cantidad"); return; }
+      if (!(oz > 0)) { this._aviso(t("Indica la cantidad")); return; }
       await this._accion(() => this._servicio("guardar_leche",
-        { oz, ubicacion: f.ubicacion.value, hecho: aServicio(f.hecho.value) }, true), "Guardado en reserva");
+        { oz, ubicacion: f.ubicacion.value, hecho: aServicio(f.hecho.value) }, true), t("Guardado en reserva"));
       f.oz.value = ""; r.getElementById("det-guardar").open = false;
       this._cargarMaterna();
     };
@@ -914,11 +931,11 @@ class BebePanel extends HTMLElement {
       if (n(f.oz_izq) !== null) d.oz_izq = aOz(n(f.oz_izq));
       if (n(f.oz_der) !== null) d.oz_der = aOz(n(f.oz_der));
       if (n(f.duracion_min) !== null) d.duracion_min = n(f.duracion_min);
-      if (!d.oz_izq && !d.oz_der) { this._aviso("Indica las oz de al menos un lado"); return; }
+      if (!d.oz_izq && !d.oz_der) { this._aviso(t("Indica la cantidad de al menos un lado")); return; }
       const reparto = (f.reparto.value.replace(/,/g, ".").match(/\d+(?:\.\d+)?/g) || []).map(Number).filter((x) => x > 0).map(aOz);
       if (reparto.length) d.biberones = reparto;
       const res = await this._accion(() => this._servicio("registrar_extraccion", d, true));
-      this._aviso(`Extracción de ${cant(res.oz_total, 2)}` + (res.biberones.length ? ` · ${res.biberones.length} biberón(es) a la reserva` : ""));
+      this._aviso(t("Extracción de {c}", { c: cant(res.oz_total, 2) }) + (res.biberones.length ? ` · ${t("{n} biberón(es) a la reserva", { n: res.biberones.length })}` : ""));
       f.oz_izq.value = ""; f.oz_der.value = ""; f.duracion_min.value = ""; f.reparto.value = "";
       f.fin.value = aInputLocal(new Date());
       this._cargarMaterna();
@@ -930,14 +947,14 @@ class BebePanel extends HTMLElement {
     let pausar = true;
     if (b && b.restante > 0) {
       pausar = await this._elegir(
-        `Hay un biberón de ${TIPOS[b.tipo] || "fórmula"} en curso (${cantN(b.consumido, 2)} de ${cant(b.oz, 2)}). ¿Qué hacemos con él?`,
-        [["pausa", "Materna primero y guardar el actual para después", "primario"],
-         ["tirar", `Tirar el actual (${cant(b.restante, 2)})`, "peligro"]]);
+        t("Hay un biberón de {tipo} en curso ({a} de {b}). ¿Qué hacemos con él?", { tipo: TIPOS[b.tipo] || TIPOS.formula, a: cantN(b.consumido, 2), b: cant(b.oz, 2) }),
+        [["pausa", t("Materna primero y guardar el actual para después"), "primario"],
+         ["tirar", t("Tirar el actual ({c})", { c: cant(b.restante, 2) }), "peligro"]]);
       if (pausar === null) return;
       pausar = pausar === "pausa";
     }
     const r = await this._accion(() => this._servicio("usar_reserva", { ...(id ? { id } : {}), pausar_actual: pausar }, true));
-    this._aviso(`Biberón en curso: leche materna ${cant(r.biberon.oz, 2)}` + (b && b.restante > 0 ? (pausar ? " · el anterior quedó en pausa" : " · el anterior se tiró") : ""));
+    this._aviso(t("Biberón en curso: leche materna {c}", { c: cant(r.biberon.oz, 2) }) + (b && b.restante > 0 ? ` · ${pausar ? t("el anterior quedó en pausa") : t("el anterior se tiró")}` : ""));
     if (this._tab === "materna") this._cargarMaterna();
   }
 
@@ -946,8 +963,8 @@ class BebePanel extends HTMLElement {
     return new Promise((resolver) => {
       const { dlg, cerrar } = this._modal(`
         <p>${esc(texto)}</p>
-        <div class="opciones">${opciones.map(([k, t, c]) => `<button class="${c}" data-op="${k}">${esc(t)}</button>`).join("")}
-          <button class="secundario" id="cancelar">Cancelar</button></div>`);
+        <div class="opciones">${opciones.map(([k, e, c]) => `<button class="${c}" data-op="${k}">${esc(e)}</button>`).join("")}
+          <button class="secundario" id="cancelar">${t("Cancelar")}</button></div>`);
       dlg.querySelectorAll("[data-op]").forEach((x) => x.onclick = () => { cerrar(); resolver(x.dataset.op); });
       dlg.querySelector("#cancelar").onclick = () => { cerrar(); resolver(null); };
       dlg.querySelector(".fondo").addEventListener("click", (e) => { if (e.target.classList.contains("fondo")) resolver(null); });
@@ -959,19 +976,19 @@ class BebePanel extends HTMLElement {
   _htmlMedidas() {
     return `
       <section class="tarjeta">
-        <h2>Nueva medida</h2>
+        <h2>${t("Nueva medida")}</h2>
         <form class="form" id="form-medida" onsubmit="return false">
-          <label class="completo">Fecha<input type="datetime-local" name="fecha" value="${aInputLocal(new Date())}"></label>
-          <label>Peso (kg)<input type="number" name="peso_kg" step="0.01" min="0.5" max="30" inputmode="decimal"></label>
-          <label>Talla (cm)<input type="number" name="talla_cm" step="0.1" min="20" max="130" inputmode="decimal"></label>
-          <label>Perímetro cefálico (cm)<input type="number" name="perimetro_cm" step="0.1" min="20" max="60" inputmode="decimal"></label>
-          <label>Nota<input type="text" name="nota" placeholder="p. ej. cita pediatra"></label>
+          <label class="completo">${t("Fecha")}<input type="datetime-local" name="fecha" value="${aInputLocal(new Date())}"></label>
+          <label>${t("Peso (kg)")}<input type="number" name="peso_kg" step="0.01" min="0.5" max="30" inputmode="decimal"></label>
+          <label>${t("Talla (cm)")}<input type="number" name="talla_cm" step="0.1" min="20" max="130" inputmode="decimal"></label>
+          <label>${t("Perímetro cefálico (cm)")}<input type="number" name="perimetro_cm" step="0.1" min="20" max="60" inputmode="decimal"></label>
+          <label>${t("Nota")}<input type="text" name="nota" placeholder="${t("p. ej. cita pediatra")}"></label>
         </form>
-        <button class="primario" id="guardar-medida">Guardar medida</button>
+        <button class="primario" id="guardar-medida">${t("Guardar medida")}</button>
       </section>
-      <section class="tarjeta"><h2>Peso (kg) por edad</h2><div id="g-peso"></div></section>
-      <section class="tarjeta"><h2>Talla (cm) por edad</h2><div id="g-talla"></div></section>
-      <section class="tarjeta"><h2>Historial</h2><div id="lista-medidas"></div></section>`;
+      <section class="tarjeta"><h2>${t("Peso (kg) por edad")}</h2><div id="g-peso"></div></section>
+      <section class="tarjeta"><h2>${t("Talla (cm) por edad")}</h2><div id="g-talla"></div></section>
+      <section class="tarjeta"><h2>${t("Historial")}</h2><div id="lista-medidas"></div></section>`;
   }
 
   _eventosMedidas() {
@@ -981,8 +998,8 @@ class BebePanel extends HTMLElement {
       const d = { fecha: aServicio(f.fecha.value) };
       ["peso_kg", "talla_cm", "perimetro_cm"].forEach((k) => { if (f[k].value !== "") d[k] = parseFloat(f[k].value); });
       if (f.nota.value.trim()) d.nota = f.nota.value.trim();
-      if (!d.peso_kg && !d.talla_cm && !d.perimetro_cm) { this._aviso("Escribe al menos peso, talla o perímetro"); return; }
-      await this._accion(() => this._servicio("registrar_medida", d, true), "Medida guardada");
+      if (!d.peso_kg && !d.talla_cm && !d.perimetro_cm) { this._aviso(t("Escribe al menos peso, talla o perímetro")); return; }
+      await this._accion(() => this._servicio("registrar_medida", d, true), t("Medida guardada"));
       f.reset(); f.fecha.value = aInputLocal(new Date());
       this._cargarMedidas();
     };
@@ -990,7 +1007,7 @@ class BebePanel extends HTMLElement {
 
   async _cargarMedidas() {
     try { this._medidas = (await this._servicio("listar_medidas", {}, true)).medidas; }
-    catch (e) { this._aviso(`Error: ${e.message}`); return; }
+    catch (e) { this._aviso(`${t("Error")}: ${e.message}`); return; }
     const nac = new Date(this._cfg.nacimiento + "T00:00");
     const edad = (iso) => Math.max(0, Math.round((inicioDia(new Date(iso)) - nac) / 86400000));
     const pts = (campo) => this._medidas.filter((m) => m[campo] != null).map((m) => ({ x: edad(m.fecha), y: m[campo] }));
@@ -1003,15 +1020,15 @@ class BebePanel extends HTMLElement {
       return `<li class="medida">
         <span class="hora">${d.getDate()} ${MESES[d.getMonth()]}</span>
         <span class="oz">${[m.peso_kg != null ? `${num(m.peso_kg, 2)} kg` : "", m.talla_cm != null ? `${num(m.talla_cm, 1)} cm` : "",
-          m.perimetro_cm != null ? `PC ${num(m.perimetro_cm, 1)}` : ""].filter(Boolean).join(" · ")}</span>
-        <span class="meta-t">${edad(m.fecha)} días${m.nota ? ` · ${esc(m.nota)}` : ""}</span>
-        <button class="icono" data-borrar="${m.id}" aria-label="Borrar">✕</button>
+          m.perimetro_cm != null ? `${t("PC")} ${num(m.perimetro_cm, 1)}` : ""].filter(Boolean).join(" · ")}</span>
+        <span class="meta-t">${t("{n} días", { n: edad(m.fecha) })}${m.nota ? ` · ${esc(m.nota)}` : ""}</span>
+        <button class="icono" data-borrar="${m.id}" aria-label="${t("Borrar")}">✕</button>
       </li>`;
-    }).join("")}</ul>` : `<p class="vacio">Sin medidas.</p>`;
+    }).join("")}</ul>` : `<p class="vacio">${t("Sin medidas.")}</p>`;
     lista.querySelectorAll("[data-borrar]").forEach((b) => {
       b.onclick = async () => {
-        if (!confirm("¿Borrar esta medida?")) return;
-        await this._accion(() => this._servicio("borrar_medida", { id: Number(b.dataset.borrar) }, true), "Medida borrada");
+        if (!confirm(t("¿Borrar esta medida?"))) return;
+        await this._accion(() => this._servicio("borrar_medida", { id: Number(b.dataset.borrar) }, true), t("Medida borrada"));
         this._cargarMedidas();
       };
     });
@@ -1022,20 +1039,20 @@ class BebePanel extends HTMLElement {
     return `
       <div class="segmentos">
         ${[["dia", "Día"], ["semana", "Semana"], ["mes", "Mes"]]
-          .map(([k, t]) => `<button data-p="${k}" class="${k === this._periodo ? "activa" : ""}">${t}</button>`).join("")}
+          .map(([k, e]) => `<button data-p="${k}" class="${k === this._periodo ? "activa" : ""}">${t(e)}</button>`).join("")}
       </div>
       <section class="tarjeta"><h2 id="t-oz"></h2><div id="g-oz"></div>
-        <div class="leyenda"><span class="c1"></span>Fórmula <span class="c4"></span>Materna <span class="c3"></span>Meta</div></section>
+        <div class="leyenda"><span class="c1"></span>${TIPOS.formula} <span class="c4"></span>${TIPOS.materna} <span class="c3"></span>${t("Meta")}</div></section>
       <section class="tarjeta"><h2 id="t-tomas"></h2><div id="g-tomas"></div></section>
-      <section class="tarjeta"><h2>Promedio por toma</h2><div id="g-ozt"></div></section>
+      <section class="tarjeta"><h2>${t("Promedio por toma")}</h2><div id="g-ozt"></div></section>
       <section class="tarjeta"><h2 id="t-bib"></h2><div id="g-bib"></div></section>
-      <section class="tarjeta"><h2>Biberones terminados (%)</h2><div id="g-term"></div></section>
+      <section class="tarjeta"><h2>${t("Biberones terminados (%)")}</h2><div id="g-term"></div></section>
       <section class="tarjeta"><h2 id="t-des"></h2><div id="g-des"></div><p class="sub" id="n-des"></p></section>
       <section class="tarjeta"><h2 id="t-ext"></h2><div id="g-ext"></div></section>
       <section class="tarjeta"><h2 id="t-pan"></h2><div id="g-pan"></div>
-        <div class="leyenda"><span class="c5"></span>Pipí <span class="c6"></span>Popó <span class="c7"></span>Ambos</div></section>
-      <section class="tarjeta"><h2>¿A qué hora come? (promedio por hora, últimos 7 días)</h2><div id="g-hora-oz"></div></section>
-      <section class="tarjeta"><h2>¿A qué hora se cambia el pañal? (promedio por hora, 7 días)</h2><div id="g-hora-pan"></div></section>`;
+        <div class="leyenda"><span class="c5"></span>${t("Pipí")} <span class="c6"></span>${t("Popó")} <span class="c7"></span>${t("Ambos")}</div></section>
+      <section class="tarjeta"><h2>${t("¿A qué hora come? (promedio por hora, últimos 7 días)")}</h2><div id="g-hora-oz"></div></section>
+      <section class="tarjeta"><h2>${t("¿A qué hora se cambia el pañal? (promedio por hora, 7 días)")}</h2><div id="g-hora-pan"></div></section>`;
   }
 
   _eventosGraficas() {
@@ -1052,7 +1069,7 @@ class BebePanel extends HTMLElement {
     const p = this._periodo;
     const grupos = [];
     if (p === "dia") for (let i = 13; i >= 0; i--) {
-      const a = sumarDias(hoy, -i); grupos.push({ a, b: sumarDias(a, 1), et: i === 0 ? "hoy" : `${DIAS[a.getDay()]} ${a.getDate()}` });
+      const a = sumarDias(hoy, -i); grupos.push({ a, b: sumarDias(a, 1), et: i === 0 ? t("hoy") : `${DIAS[a.getDay()]} ${a.getDate()}` });
     }
     if (p === "semana") {
       const lunes = sumarDias(hoy, -((hoy.getDay() + 6) % 7));
@@ -1069,22 +1086,22 @@ class BebePanel extends HTMLElement {
       bibs = (await this._servicio("listar_biberones", rango, true)).biberones;
       extr = (await this._servicio("listar_extracciones", rango, true)).extracciones;
       pans = (await this._servicio("listar_panales", rango, true)).panales;
-    } catch (e) { this._aviso(`Error: ${e.message}`); }
+    } catch (e) { this._aviso(`${t("Error")}: ${e.message}`); }
     const nac = inicioDia(new Date(this._cfg.nacimiento + "T00:00"));
     const primero = tomas.length ? inicioDia(new Date(tomas[0].fin)) : hoy;
     const desdeDatos = primero > nac ? primero : nac;
     const manana = sumarDias(hoy, 1);
     const agg = grupos.map((g) => {
       const dentro = (iso) => { const d = new Date(iso); return d >= g.a && d < g.b; };
-      const ts = tomas.filter((t) => dentro(t.fin));
+      const ts = tomas.filter((tm) => dentro(tm.fin));
       const bs = bibs.filter((b) => b.estado !== "reserva" && dentro(b.preparado));
       const cerrados = bs.filter((b) => b.estado !== "abierto");
       // Días con datos en el grupo (sin contar antes del primer registro ni el futuro)
       const ini = g.a > desdeDatos ? g.a : desdeDatos, fin = g.b < manana ? g.b : manana;
       const dias = Math.max(0, Math.round((fin - ini) / 86400000));
       const div = p === "dia" ? 1 : (dias || 1);
-      const exacto = ts.filter((t) => t.tipo !== "materna").reduce((s, t) => s + t.oz_tomadas, 0);
-      const resto = ts.filter((t) => t.tipo === "materna").reduce((s, t) => s + t.oz_tomadas, 0);
+      const exacto = ts.filter((tm) => tm.tipo !== "materna").reduce((s, tm) => s + tm.oz_tomadas, 0);
+      const resto = ts.filter((tm) => tm.tipo === "materna").reduce((s, tm) => s + tm.oz_tomadas, 0);
       const ex = extr.filter((e) => dentro(e.fin)).reduce((s, e) => s + e.oz_total, 0);
       return {
         et: g.et, exacto: exacto / div, estimado: resto / div, tomas: ts.length / div,
@@ -1100,45 +1117,45 @@ class BebePanel extends HTMLElement {
     });
     const meta = this._num("meta_oz_dia"), intervalo = this._num("intervalo_indicado"), ozMeta = this._num("meta_oz_toma");
     const etiquetas = agg.map((x) => x.et);
-    const suf = p === "dia" ? "por día" : "promedio por día";
+    const suf = p === "dia" ? t("por día") : t("promedio por día");
     const r = this.shadowRoot, color = "var(--primary-color)";
     const EN_OZ = ["exacto", "estimado", "ozToma", "desechado", "extraido"];
     const serie = (clave, nombre, c, op) => ({ nombre, valores: agg.map((x) => (EN_OZ.includes(clave) ? aUnidad(x[clave]) : x[clave])), color: c, opacidad: op });
-    r.getElementById("t-oz").textContent = `${esMl() ? "ml" : "Oz"} ${suf}`;
+    r.getElementById("t-oz").textContent = `${esMl() ? "ml" : t("Oz")} ${suf}`;
     r.getElementById("g-oz").innerHTML = barras({ etiquetas, unidad: U(), meta: meta ? aUnidad(meta) : null,
-      series: [serie("exacto", "fórmula", color), serie("estimado", "materna", "var(--materna-color, #e91e63)")] });
-    r.getElementById("t-tomas").textContent = `Tomas ${suf}`;
-    r.getElementById("g-tomas").innerHTML = barras({ etiquetas, unidad: "tomas", meta: intervalo ? 24 / intervalo : null,
-      series: [serie("tomas", "tomas", "var(--accent-color, #ff9800)")] });
+      series: [serie("exacto", TIPOS.formula, color), serie("estimado", TIPOS.materna, "var(--materna-color, #e91e63)")] });
+    r.getElementById("t-tomas").textContent = `${t("Tomas")} ${suf}`;
+    r.getElementById("g-tomas").innerHTML = barras({ etiquetas, unidad: t("tomas"), meta: intervalo ? 24 / intervalo : null,
+      series: [serie("tomas", t("tomas"), "var(--accent-color, #ff9800)")] });
     r.getElementById("g-ozt").innerHTML = barras({ etiquetas, unidad: U(), meta: ozMeta ? aUnidad(ozMeta) : null, alto: 150,
-      series: [serie("ozToma", "oz/toma", "var(--success-color, #43a047)")] });
-    r.getElementById("t-bib").textContent = `Biberones ${suf}`;
-    r.getElementById("g-bib").innerHTML = barras({ etiquetas, unidad: "biberones", alto: 150,
-      series: [serie("biberones", "biberones", "var(--info-color, #039be5)")] });
+      series: [serie("ozToma", t("por toma"), "var(--success-color, #43a047)")] });
+    r.getElementById("t-bib").textContent = `${t("Biberones")} ${suf}`;
+    r.getElementById("g-bib").innerHTML = barras({ etiquetas, unidad: t("biberones"), alto: 150,
+      series: [serie("biberones", t("biberones"), "var(--info-color, #039be5)")] });
     r.getElementById("g-term").innerHTML = barras({ etiquetas, unidad: "%", alto: 150,
-      series: [serie("pct", "terminados", "var(--success-color, #43a047)")] });
-    r.getElementById("t-des").textContent = `Fórmula desechada (${U()} ${suf})`;
+      series: [serie("pct", t("terminados"), "var(--success-color, #43a047)")] });
+    r.getElementById("t-des").textContent = `${t("Fórmula desechada")} (${U()} ${suf})`;
     r.getElementById("g-des").innerHTML = barras({ etiquetas, unidad: U(), alto: 150,
-      series: [serie("desechado", "desechado", "var(--warning-color, #ff9800)")] });
-    r.getElementById("t-ext").textContent = `Leche extraída (${U()} ${suf})`;
+      series: [serie("desechado", t("desechado"), "var(--warning-color, #ff9800)")] });
+    r.getElementById("t-ext").textContent = `${t("Leche extraída")} (${U()} ${suf})`;
     r.getElementById("g-ext").innerHTML = barras({ etiquetas, unidad: U(), alto: 150,
-      series: [serie("extraido", "extraída", "var(--materna-color, #e91e63)")] });
-    r.getElementById("t-pan").textContent = `Pañales ${suf}`;
-    r.getElementById("g-pan").innerHTML = barras({ etiquetas, unidad: "pañales", alto: 160,
-      series: [serie("pipi", "pipí", "#29b6f6"), serie("popo", "popó", "#8d6e63"), serie("ambos", "ambos", "#ab47bc")] });
+      series: [serie("extraido", t("extraída"), "var(--materna-color, #e91e63)")] });
+    r.getElementById("t-pan").textContent = `${t("Pañales")} ${suf}`;
+    r.getElementById("g-pan").innerHTML = barras({ etiquetas, unidad: t("pañales"), alto: 160,
+      series: [serie("pipi", t("pipí"), "#29b6f6"), serie("popo", t("popó"), "#8d6e63"), serie("ambos", t("ambos"), "#ab47bc")] });
     // Distribución por hora del día (últimos 7 días completos + hoy)
     const hace7 = sumarDias(hoy, -6);
-    const t7 = tomas.filter((t) => new Date(t.fin) >= hace7), p7 = pans.filter((x) => new Date(x.fin) >= hace7);
+    const t7 = tomas.filter((tm) => new Date(tm.fin) >= hace7), p7 = pans.filter((x) => new Date(x.fin) >= hace7);
     const dias7 = Math.max(1, Math.min(7, Math.round((sumarDias(hoy, 1) - (desdeDatos > hace7 ? desdeDatos : hace7)) / 86400000)));
     const horas = [...Array(24).keys()];
     const porHora = (lista, f) => horas.map((h) => lista.filter((x) => new Date(x.fin).getHours() === h).reduce((s, x) => s + f(x), 0) / dias7);
     const etH = horas.map((h) => (h % 3 === 0 ? `${h}h` : ""));
     r.getElementById("g-hora-oz").innerHTML = barras({ etiquetas: etH, unidad: U(), alto: 150,
-      series: [{ nombre: U(), valores: porHora(t7, (t) => aUnidad(t.oz_tomadas)), color: "var(--primary-color)" }] });
-    r.getElementById("g-hora-pan").innerHTML = barras({ etiquetas: etH, unidad: "pañales", alto: 140,
-      series: [{ nombre: "pañales", valores: porHora(p7, () => 1), color: "#8d6e63" }] });
+      series: [{ nombre: U(), valores: porHora(t7, (tm) => aUnidad(tm.oz_tomadas)), color: "var(--primary-color)" }] });
+    r.getElementById("g-hora-pan").innerHTML = barras({ etiquetas: etH, unidad: t("pañales"), alto: 140,
+      series: [{ nombre: t("pañales"), valores: porHora(p7, () => 1), color: "#8d6e63" }] });
     const totalDes = bibs.reduce((s, b) => s + (b.desechado || 0), 0);
-    r.getElementById("n-des").textContent = `Total en el periodo: ${cant(totalDes, 1)} en ${bibs.filter((b) => b.estado === "incompleto").length} biberones incompletos.`;
+    r.getElementById("n-des").textContent = t("Total en el periodo: {c} en {n} biberones incompletos.", { c: cant(totalDes, 1), n: bibs.filter((b) => b.estado === "incompleto").length });
   }
 }
 
@@ -1284,5 +1301,126 @@ h2.sep { margin-top:18px; }
 .leyenda .c1 { background:var(--primary-color); } .leyenda .c2 { background:var(--primary-color); opacity:.45; }
 .leyenda .c3 { background:var(--error-color, #db4437); height:3px; }
 `;
+
+// ---------- Diccionario español → inglés (las claves son los textos del código) ----------
+const EN = {
+  // tablas fijas
+  "Fórmula": "Formula", "Materna": "Breast milk", "Mixta": "Mixed",
+  "Exacto": "Exact", "Estimado": "Estimated", "Inferido": "Inferred",
+  "Botón": "Button", "Alexa": "Alexa", "Notificación": "Notification", "Panel": "Panel", "Manual": "Manual", "Prueba": "Test",
+  "💧 Pipí": "💧 Pee", "💩 Popó": "💩 Poop", "💧💩 Ambos": "💧💩 Both",
+  "Amarillo": "Yellow", "Verde": "Green", "Café": "Brown", "Naranja": "Orange", "Negro": "Black", "Rojo": "Red",
+  "Blanco / gris": "White / gray", "No sé": "Not sure",
+  "Líquida": "Watery", "Grumosa": "Seedy", "Pastosa": "Pasty", "Dura": "Hard",
+  // pestañas y periodos
+  "Hoy": "Today", "Tomas": "Feedings", "Medidas": "Growth", "Gráficas": "Charts", "Ajustes": "Settings",
+  "Día": "Day", "Semana": "Week", "Mes": "Month",
+  // tiempo y edad
+  "hace {t}": "{t} ago", "en {t}": "in {t}", "{n} días": "{n} days", "{s} sem{d} ({n} días)": "{s} wk{d} ({n} days)",
+  "{m} meses ({s} sem)": "{m} months ({s} wk)", "hoy": "today",
+  // comunes
+  "meta": "goal", "Meta": "Goal", "Sin datos todavía.": "No data yet.", "Error": "Error", "Error al cargar": "Error loading",
+  "Guardar": "Save", "Cancelar": "Cancel", "Borrar": "Delete", "Hora": "Time", "Tipo": "Type", "Nota": "Note", "opcional": "optional",
+  "Fecha": "Date", "Color": "Color", "Consistencia": "Consistency", "Confianza": "Confidence", "de": "of",
+  "{a} de {b}": "{a} of {b}", "quedan": "left", "quedan {c}": "{c} left", "Cantidad": "Amount", "Cantidad no válida": "Invalid amount",
+  "Oz": "Amount", "tomas": "feedings", "biberones": "bottles", "Biberones": "Bottles", "pañales": "diapers", "Pañales": "Diapers",
+  "Pipí": "Pee", "Popó": "Poop", "Ambos": "Both", "pipí": "pee", "popó": "poop", "ambos": "both",
+  // Hoy
+  "Registrar con otra hora…": "Log with a different time…", "Guardar toma": "Save feeding",
+  "Biberón en curso": "Current bottle", "({n} en reserva)": "({n} in stash)", "(sin reserva)": "(no stash)",
+  "Cambiar el tamaño de este biberón": "Change this bottle's size", "Cambiar tamaño": "Change size",
+  "Primera toma {h} · 1 toma": "First feeding {h} · 1 feeding", "Primera toma {h} · {n} tomas": "First feeding {h} · {n} feedings",
+  "Preparado {h} · sin tomas aún": "Prepared {h} · no feedings yet", "límite": "use by",
+  "Ya pasó el límite desde su primera toma: considera preparar uno nuevo.": "It is past the limit since its first feeding: consider preparing a new one.",
+  "No hay biberón abierto: la siguiente toma empieza uno de {c}.": "No open bottle: the next feeding starts a {c} one.",
+  "En pausa:": "Paused:", "Ya pasó su límite ({h}): mejor tírala.": "Past its limit ({h}): better discard it.",
+  "Usar antes de {h}": "Use before {h}", "lo que sobre de la actual se sumará aquí": "any excess from the current one will be added here",
+  "Continuar": "Resume", "Tirar lo que queda ({c})": "Discard what is left ({c})", "¿Cuánto tomó?": "How much did baby drink?",
+  "Lo que quedaba ({c})": "What was left ({c})", "Otro…": "Other…",
+  "¿De cuánto es este biberón? ({u}; ya tomó {c})": "How big is this bottle? ({u}; already drank {c})",
+  "No puede ser menor a lo que ya tomó ({c})": "It cannot be less than what was already drunk ({c})",
+  "Este biberón ahora es de {c}": "This bottle is now {c}", "Seguimos con ese biberón": "Back to that bottle",
+  "¿Tirar lo que queda de ese biberón?": "Discard what is left in that bottle?", "Biberón tirado": "Bottle discarded",
+  "Tomó {c} · biberón {a}/{b}": "Drank {c} · bottle {a}/{b}", "se empezó un biberón nuevo": "a new bottle was started",
+  "Biberón nuevo de {c}": "New {c} bottle", "el anterior quedó en {a}/{b}": "the previous one ended at {a}/{b}",
+  "Hoy: {a} de {b} · {c} tomas · {d} biberones · {e} pañales": "Today: {a} of {b} · {c} feedings · {d} bottles · {e} diapers",
+  "{p}% de la meta": "{p}% of goal", "Ritmo (últimas 24 h)": "Rate (last 24 h)", "Por toma (7 d)": "Per feeding (7 d)",
+  "{n} tomas/día · cada {h} h": "{n} feedings/day · every {h} h", "Pañales hoy": "Diapers today",
+  "{n}/día (7 d) · cada {h} h": "{n}/day (7 d) · every {h} h", "Biberones terminados (7 d)": "Bottles finished (7 d)",
+  "desechado": "wasted", "Edad": "Age", "Peso · Talla": "Weight · Length",
+  "Última toma": "Last feeding", "Sin registros": "No records", "sin registros": "no records", "Siguiente toma": "Next feeding", "ya toca": "due now",
+  // pañales
+  "Pañal": "Diaper", "último": "last", "Último pipí": "Last pee", "Pañal registrado:": "Diaper logged:",
+  "este color conviene comentarlo con el pediatra": "this color is worth mentioning to the pediatrician",
+  "¿Cómo fue la popó?": "What was the poop like?", "Elige color y consistencia (o \"No sé\")": "Choose color and consistency (or \"Not sure\")",
+  "Nuevo pañal": "New diaper", "Pañal de las {h}": "Diaper at {h}",
+  "Para popó elige color y consistencia (o \"No sé\")": "For poop choose color and consistency (or \"Not sure\")",
+  "Pañal agregado": "Diaper added", "Pañal actualizado": "Diaper updated", "¿Borrar este pañal?": "Delete this diaper?", "Pañal borrado": "Diaper deleted",
+  "Toma guardada": "Feeding saved",
+  // formulario de toma
+  "Tomó": "Drank", "Es de un biberón nuevo": "It is from a new bottle", "Indica la hora": "Enter the time", "Indica cuánto tomó": "Enter how much was drunk",
+  // Tomas
+  "En curso": "Current", "Terminado": "Finished", "Incompleto": "Incomplete", "Día anterior": "Previous day", "Día siguiente": "Next day",
+  "se desecharon {c}": "{c} wasted", "Sin biberón": "No bottle", "Sin tomas este día.": "No feedings this day.",
+  "+ Agregar toma a este día": "+ Add feeding to this day", "Pañales del día": "Diapers of the day", "Sin pañales este día.": "No diapers this day.",
+  "+ Agregar pañal a este día": "+ Add diaper to this day", "Nueva toma": "New feeding", "Toma de las {h}": "Feeding at {h}",
+  "Registrada por": "Logged by", "Mover a biberón nuevo": "Move to a new bottle", "Unir al biberón anterior": "Join the previous bottle",
+  "Toma agregada": "Feeding added", "Toma actualizada": "Feeding updated", "¿Borrar la toma de las {h} ({c})?": "Delete the feeding at {h} ({c})?",
+  "Toma borrada": "Feeding deleted", "Movida (con las siguientes del mismo biberón) a un biberón nuevo": "Moved (with the following ones from the same bottle) to a new bottle",
+  "Unida al biberón anterior": "Joined the previous bottle",
+  "Biberón de las {h}": "Bottle at {h}", "{a} de {b} en 1 toma": "{a} of {b} in 1 feeding", "{a} de {b} en {n} tomas": "{a} of {b} in {n} feedings",
+  "Tamaño": "Size", "Cerrar (desechar {c})": "Close (discard {c})", "Reabrir": "Reopen", "Biberón actualizado": "Bottle updated",
+  "Biberón cerrado": "Bottle closed", "Biberón reabierto": "Bottle reopened",
+  // Ajustes
+  "Biberón e indicación del pediatra": "Bottle and pediatrician's advice", "Oz por biberón": "Bottle size", "(se guarda en oz)": "(stored in oz)",
+  "Tamaño de cada biberón nuevo.": "Size of each new bottle.", "Fórmula empezada: límite (h)": "Started formula: limit (h)",
+  "Después de esto se sugiere preparar otro.": "After this, preparing a new one is suggested.", "Materna empezada: límite (h)": "Started breast milk: limit (h)",
+  "Materna a temp. ambiente (h)": "Breast milk at room temp. (h)", "Materna en refrigerador (días)": "Breast milk in the fridge (days)",
+  "Meta oz por toma": "Goal per feeding (oz)", "Cada cuántas horas": "Every how many hours", "Guardar ajustes": "Save settings",
+  "Lo que dicen los últimos 7 días": "What the last 7 days say",
+  "Meta diaria: {c} ({n} tomas al día). El recordatorio sonará {h} h después de cada toma.": "Daily goal: {c} ({n} feedings a day). The reminder will fire {h} h after each feeding.",
+  "Sin cambios": "No changes", "Ajustes guardados": "Settings saved", "Todavía no hay suficientes registros.": "Not enough records yet.",
+  "Toma en promedio <b>{c}</b> por toma, unas <b>{n}</b> veces al día.": "Drinks on average <b>{c}</b> per feeding, about <b>{n}</b> times a day.",
+  "Terminó el <b>{p}%</b> de sus biberones; se desecharon <b>{c}</b> de fórmula.": "Finished <b>{p}%</b> of bottles; <b>{c}</b> of formula was wasted.",
+  "Muchos biberones quedan incompletos: podrían preparar menos (≈{c}) para desperdiciar menos.": "Many bottles are left unfinished: you could prepare less (≈{c}) to waste less.",
+  "Se termina casi todos sus biberones: buen dato para comentar con el pediatra por si conviene aumentar.": "Finishes almost every bottle: worth mentioning to the pediatrician in case an increase is appropriate.",
+  "Come en tomas pequeñas ({c} vs meta {m}): es normal que coma más seguido.": "Eats in small feedings ({c} vs goal {m}): it is normal to eat more often.",
+  "Son referencias de tus registros; cualquier cambio de cantidad, consúltalo con su pediatra.": "These are references from your records; check any change in amount with your pediatrician.",
+  // Materna
+  "Reserva": "Stash", "＋ Guardar biberón de leche materna": "＋ Save breast milk bottle", "Dónde": "Where", "Refrigerador": "Fridge",
+  "Temperatura ambiente": "Room temperature", "Se hizo a las": "Made at", "Guardar en reserva": "Save to stash", "Registrar extracción": "Log pumping session",
+  "Terminó a las": "Ended at", "Izquierdo": "Left", "Derecho": "Right", "Duración (min)": "Duration (min)", "Dónde se guarda": "Where it is stored",
+  "Guardar en biberones de reserva": "Save as stash bottles", "Repartir en biberones (opcional)": "Split into bottles (optional)",
+  "ej. 2 + 1.5  (vacío = un biberón con todo)": "e.g. 2 + 1.5  (empty = one bottle with everything)", "Guardar extracción": "Save pumping session",
+  "Extracciones recientes": "Recent pumping sessions", "En reserva": "In stash", "1 biberón": "1 bottle", "{n} biberones": "{n} bottles",
+  "1 caducado": "1 expired", "{n} caducados": "{n} expired", "Próxima caducidad": "Next expiry", "Extraído hoy": "Pumped today",
+  "promedio {c}/día (7 d)": "average {c}/day (7 d)", "Tomó hoy": "Drank today", "{a} materna · {b} fórmula": "{a} breast milk · {b} formula",
+  "{p}% materna · desechada 7 d: {c}": "{p}% breast milk · wasted 7 d: {c}", "Ambiente": "Room temp.", "{c} vigentes": "{c} usable",
+  "Caducó": "Expired", "Caduca": "Expires", "la más antigua": "the oldest", "Usar": "Use", "A ambiente": "To room temp.", "Al refri": "To fridge",
+  "Desechar": "Discard", "No hay leche materna en reserva.": "No breast milk in the stash.", "Movido": "Moved",
+  "¿Desechar este biberón de leche materna?": "Discard this breast milk bottle?", "Desechado": "Discarded", "izq": "L", "der": "R",
+  "Sin extracciones en los últimos 3 días.": "No pumping sessions in the last 3 days.",
+  "¿Borrar esta extracción? También se quitan sus biberones de reserva sin usar.": "Delete this pumping session? Its unused stash bottles are removed too.",
+  "Extracción borrada": "Pumping session deleted", "Indica la cantidad": "Enter the amount", "Guardado en reserva": "Saved to stash",
+  "Indica la cantidad de al menos un lado": "Enter the amount for at least one side", "Extracción de {c}": "Pumped {c}",
+  "{n} biberón(es) a la reserva": "{n} bottle(s) to the stash",
+  "Hay un biberón de {tipo} en curso ({a} de {b}). ¿Qué hacemos con él?": "There is a {tipo} bottle in progress ({a} of {b}). What should we do with it?",
+  "Materna primero y guardar el actual para después": "Breast milk first, keep the current one for later", "Tirar el actual ({c})": "Discard the current one ({c})",
+  "Biberón en curso: leche materna {c}": "Current bottle: breast milk {c}", "el anterior quedó en pausa": "the previous one is paused",
+  "el anterior se tiró": "the previous one was discarded",
+  // Medidas
+  "Nueva medida": "New measurement", "Peso (kg)": "Weight (kg)", "Talla (cm)": "Length (cm)", "Perímetro cefálico (cm)": "Head circumference (cm)",
+  "p. ej. cita pediatra": "e.g. pediatrician visit", "Guardar medida": "Save measurement", "Peso (kg) por edad": "Weight (kg) by age",
+  "Talla (cm) por edad": "Length (cm) by age", "Historial": "History", "Escribe al menos peso, talla o perímetro": "Enter at least weight, length or head circumference",
+  "Medida guardada": "Measurement saved", "PC": "HC", "Sin medidas.": "No measurements.", "¿Borrar esta medida?": "Delete this measurement?",
+  "Medida borrada": "Measurement deleted",
+  // Gráficas
+  "Promedio por toma": "Average per feeding", "Biberones terminados (%)": "Bottles finished (%)",
+  "¿A qué hora come? (promedio por hora, últimos 7 días)": "When does baby eat? (average per hour, last 7 days)",
+  "¿A qué hora se cambia el pañal? (promedio por hora, 7 días)": "When are diapers changed? (average per hour, 7 days)",
+  "por día": "per day", "promedio por día": "average per day", "por toma": "per feeding", "terminados": "finished",
+  "Fórmula desechada": "Formula wasted", "Leche extraída": "Pumped milk", "extraída": "pumped",
+  "Total en el periodo: {c} en {n} biberones incompletos.": "Total in the period: {c} in {n} incomplete bottles.",
+};
 
 customElements.define("bebe-panel", BebePanel);

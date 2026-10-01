@@ -10,10 +10,12 @@ Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones 
   El panel muestra un selector cuando hay más de un bebé (recuerda el último elegido en cada dispositivo).
 - Copia automática de la base antes de cada migración de esquema (`<base>.antes-vN`).
 - Los biberones creados automáticamente usan el tipo de leche principal del bebé.
+- Inglés: integración (formularios, sensores, acciones) y panel completo; el panel usa el idioma del usuario de Home Assistant.
+### Corregido
+- El encabezado del panel podía trabarse al cambiar de bebé (recursión al actualizar la edad).
 ### Compatibilidad
 - Instalaciones existentes siguen usando `bebe.db`; sus entidades, acciones y automatizaciones no cambian.
 ### Planeado
-- Traducción completa al inglés.
 - Blueprints para botón, recordatorio, leche materna y voz.
 
 ## [0.3.0] - 2026-09-30
