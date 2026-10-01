@@ -3,6 +3,18 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico (MAYOR.MENOR.PARCHE).
 Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones menores.
 
+## [0.5.0] - sin publicar
+### Agregado
+- Leche materna desde la reserva: "＋ Materna" en Hoy pregunta qué biberón de la reserva usar (primero el que caduca antes)
+  cuando hay más de uno. Al registrar una toma de materna con biberón nuevo, o al cambiar un biberón a materna, el panel
+  pregunta de cuál de la reserva salió y la descuenta (o "No es de la reserva").
+- `registrar_toma` acepta `reserva_id` y `pausar_actual`; `corregir_biberon` acepta `reserva_id`.
+### Cambiado
+- El tipo de una toma es siempre el de su biberón (`tipo` en `registrar_toma` solo decide el de un biberón nuevo);
+  al cambiar el tipo de un biberón, sus tomas cambian también.
+### Corregido
+- Un biberón de materna creado a mano no descontaba la reserva (la leche quedaba ahí y luego contaba como desechada).
+
 ## [0.4.0] - sin publicar
 ### Agregado
 - Varios bebés por instalación: una entrada por bebé, cada uno con su base de datos, sensores y ajustes.

@@ -528,7 +528,9 @@ class BebePanel extends HTMLElement {
     const r = this.shadowRoot;
     r.getElementById("guardar-nueva").addEventListener("click", async () => {
       const f = r.getElementById("form-nueva");
-      const datos = this._leerForm(f, true);
+      let datos = this._leerForm(f, true);
+      if (!datos) return;
+      datos = await this._tomaMaterna(datos);
       if (!datos) return;
       await this._accion(() => this._servicio("registrar_toma", { ...datos, fuente: "app" }, true), t("Toma guardada"));
       r.getElementById("detalle").open = false;
@@ -684,8 +686,9 @@ class BebePanel extends HTMLElement {
     if (conf) f.addEventListener("input", (e) => { if (e.target.name === "oz_tomadas") conf.value = "exacto"; });
     const listo = (msg) => (async () => { cerrar(); this._cargarTomas(); if (msg) this._aviso(msg); })();
     dlg.querySelector("#guardar").onclick = async () => {
-      const d = this._leerForm(f, nueva); if (!d) return;
+      let d = this._leerForm(f, nueva); if (!d) return;
       if (nueva) {
+        d = await this._tomaMaterna(d); if (!d) return;
         await this._accion(() => this._servicio("registrar_toma", { ...d, fuente: "app" }, true), t("Toma agregada"));
       } else {
         d.confianza = conf.value;
@@ -733,8 +736,14 @@ class BebePanel extends HTMLElement {
     dlg.querySelector("#guardar-bib").onclick = async () => {
       const f = dlg.querySelector("#form-bib");
       const oz = aOz(parseFloat(f.oz.value));
-      await this._accion(() => this._servicio("corregir_biberon",
-        { id: b.id, oz, tipo: f.tipo.value, nota: f.nota.value.trim() }, true), t("Biberón actualizado"));
+      const d = { id: b.id, oz, tipo: f.tipo.value, nota: f.nota.value.trim() };
+      if (d.tipo === "materna" && b.tipo !== "materna" && b.estado !== "reserva") {
+        // Pasó a leche materna: ¿salió de la reserva? Entonces se descuenta de ella
+        const rid = await this._elegirReserva(true);
+        if (rid === null) return;
+        if (rid !== "no") { d.reserva_id = rid; if (Math.abs(oz - b.oz) < 0.01) delete d.oz; }
+      }
+      await this._accion(() => this._servicio("corregir_biberon", d, true), t("Biberón actualizado"));
       listo();
     };
     const c = dlg.querySelector("#cerrar-bib");
@@ -942,18 +951,56 @@ class BebePanel extends HTMLElement {
     };
   }
 
-  async _usarReserva(id) {
+  // Si hay un biberón en curso con leche: true = dejarlo en pausa, false = tirarlo, null = cancelar
+  async _preguntarPausa() {
     const b = this._biberon();
-    let pausar = true;
-    if (b && b.restante > 0) {
-      pausar = await this._elegir(
-        t("Hay un biberón de {tipo} en curso ({a} de {b}). ¿Qué hacemos con él?", { tipo: TIPOS[b.tipo] || TIPOS.formula, a: cantN(b.consumido, 2), b: cant(b.oz, 2) }),
-        [["pausa", t("Materna primero y guardar el actual para después"), "primario"],
-         ["tirar", t("Tirar el actual ({c})", { c: cant(b.restante, 2) }), "peligro"]]);
-      if (pausar === null) return;
-      pausar = pausar === "pausa";
-    }
-    const r = await this._accion(() => this._servicio("usar_reserva", { ...(id ? { id } : {}), pausar_actual: pausar }, true));
+    if (!(b && b.restante > 0)) return true;
+    const r = await this._elegir(
+      t("Hay un biberón de {tipo} en curso ({a} de {b}). ¿Qué hacemos con él?", { tipo: TIPOS[b.tipo] || TIPOS.formula, a: cantN(b.consumido, 2), b: cant(b.oz, 2) }),
+      [["pausa", t("Materna primero y guardar el actual para después"), "primario"],
+       ["tirar", t("Tirar el actual ({c})", { c: cant(b.restante, 2) }), "peligro"]]);
+    return r === null ? null : r === "pausa";
+  }
+
+  // Qué biberón de la reserva se usa: id, "no" (no salió de la reserva) o null (cancelar).
+  // Sin conNinguna y con un solo biberón vigente, se usa ese sin preguntar.
+  async _elegirReserva(conNinguna = false) {
+    let rs = [];
+    try { rs = (await this._servicio("listar_reservas", {}, true)).reservas.filter((b) => !b.caducado); }
+    catch (e) { this._aviso(`${t("Error al cargar")}: ${e.message}`); return null; }
+    if (!rs.length) return conNinguna ? "no" : null;
+    rs.sort((a, b) => new Date(a.caduca || a.hecho) - new Date(b.caduca || b.hecho));  // primero la que caduca antes
+    if (rs.length === 1 && !conNinguna) return rs[0].id;
+    const LUGAR = { refrigerador: t("Refrigerador"), ambiente: t("Ambiente") };
+    const op = rs.map((b, i) => {
+      const d = new Date(b.hecho || b.preparado);
+      return [String(b.id), `${cant(b.oz, 2)} · ${d.getDate()} ${MESES[d.getMonth()]} ${hora(b.hecho || b.preparado)} · ${LUGAR[b.ubicacion] || "—"}`
+        + (b.caduca ? ` · ${t("Caduca")} ${relativo(b.caduca)}` : ""), i === 0 ? "primario" : "secundario"];
+    });
+    if (conNinguna) op.push(["no", t("No es de la reserva"), "secundario"]);
+    const r = await this._elegir(t("¿Qué biberón de leche materna de la reserva se usó?"), op);
+    return r === null || r === "no" ? r : Number(r);
+  }
+
+  // Toma de leche materna que empieza biberón: preguntar si salió de la reserva para descontarla
+  async _tomaMaterna(d) {
+    const b = this._biberon();
+    if (d.tipo !== "materna" || (!d.nuevo_biberon && b && b.restante > 0 && b.tipo === "materna")) return d;
+    const id = await this._elegirReserva(true);
+    if (id === null) return null;
+    if (id === "no") return { ...d, nuevo_biberon: true };
+    const pausar = await this._preguntarPausa();
+    if (pausar === null) return null;
+    const { nuevo_biberon, ...resto } = d;
+    return { ...resto, reserva_id: id, pausar_actual: pausar };
+  }
+
+  async _usarReserva(id) {
+    if (!id) { id = await this._elegirReserva(); if (!id) return; }
+    const b = this._biberon();
+    const pausar = await this._preguntarPausa();
+    if (pausar === null) return;
+    const r = await this._accion(() => this._servicio("usar_reserva", { id, pausar_actual: pausar }, true));
     this._aviso(t("Biberón en curso: leche materna {c}", { c: cant(r.biberon.oz, 2) }) + (b && b.restante > 0 ? ` · ${pausar ? t("el anterior quedó en pausa") : t("el anterior se tiró")}` : ""));
     if (this._tab === "materna") this._cargarMaterna();
   }
@@ -1406,7 +1453,8 @@ const EN = {
   "{n} biberón(es) a la reserva": "{n} bottle(s) to the stash",
   "Hay un biberón de {tipo} en curso ({a} de {b}). ¿Qué hacemos con él?": "There is a {tipo} bottle in progress ({a} of {b}). What should we do with it?",
   "Materna primero y guardar el actual para después": "Breast milk first, keep the current one for later", "Tirar el actual ({c})": "Discard the current one ({c})",
-  "Biberón en curso: leche materna {c}": "Current bottle: breast milk {c}", "el anterior quedó en pausa": "the previous one is paused",
+  "Biberón en curso: leche materna {c}": "Current bottle: breast milk {c}",
+  "No es de la reserva": "Not from the stash", "¿Qué biberón de leche materna de la reserva se usó?": "Which breast milk stash bottle was used?", "el anterior quedó en pausa": "the previous one is paused",
   "el anterior se tiró": "the previous one was discarded",
   // Medidas
   "Nueva medida": "New measurement", "Peso (kg)": "Weight (kg)", "Talla (cm)": "Length (cm)", "Perímetro cefálico (cm)": "Head circumference (cm)",

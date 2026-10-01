@@ -67,6 +67,9 @@ ESQUEMA_REGISTRAR = vol.Schema({
     # Toques seguidos del botón: sumar a la última toma si fue hace menos de N segundos
     vol.Optional("acumular_segundos", default=0): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
     vol.Optional("tipo"): vol.In(TIPOS),
+    # La toma es de este biberón de la reserva (pasa a ser el biberón en curso)
+    vol.Optional("reserva_id"): cv.positive_int,
+    vol.Optional("pausar_actual", default=True): cv.boolean,
     vol.Optional("confianza", default="exacto"): vol.In(CONFIANZAS),
     vol.Optional("fuente", default="manual"): cv.string,
     vol.Optional("nota"): cv.string,
@@ -98,6 +101,8 @@ ESQUEMA_CORREGIR_BIBERON = vol.Schema({
     vol.Optional("tipo"): vol.In(TIPOS),
     vol.Optional("nota"): cv.string,
     vol.Optional("reabrir"): cv.boolean,
+    # El biberón salió de esta leche de la reserva (se descuenta de ella)
+    vol.Optional("reserva_id"): cv.positive_int,
 })
 
 ESQUEMA_GUARDAR_LECHE = vol.Schema({
@@ -244,6 +249,7 @@ async def _registrar_toma(hass: HomeAssistant, call: ServiceCall) -> ServiceResp
         usuario=await _usuario(hass, call), nota=d.get("nota"),
         nuevo_biberon=d["nuevo_biberon"], acumular_s=d["acumular_segundos"],
         oz_default=rt.oz_default, lim=rt.limites, en_vivo=en_vivo, tipo_biberon=rt.tipo_default,
+        reserva_id=d.get("reserva_id"), pausar_actual=d["pausar_actual"],
     )
     await _despues(hass, rt, "registrada", {"id": r["id"], "biberon_id": r["biberon"]["id"],
                                             "biberon_nuevo": r["biberon_nuevo"]})

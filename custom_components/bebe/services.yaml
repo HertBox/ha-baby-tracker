@@ -22,6 +22,12 @@ registrar_toma:
     tipo:
       selector:
         select: {translation_key: tipo, options: [formula, materna, mixta]}
+    reserva_id:
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+    pausar_actual:
+      selector:
+        boolean:
     confianza:
       selector:
         select: {translation_key: confianza, options: [exacto, estimado, inferido]}
@@ -144,6 +150,9 @@ corregir_biberon:
     reabrir:
       selector:
         boolean:
+    reserva_id:
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
 
 registrar_medida:
   fields:

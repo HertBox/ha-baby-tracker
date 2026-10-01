@@ -262,6 +262,14 @@
         "bebe": {
           "name": "Bebé",
           "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
+        },
+        "reserva_id": {
+          "name": "Biberón de la reserva",
+          "description": "La toma es de este biberón de leche materna de la reserva (ver Listar reserva), que pasa a ser el biberón en curso."
+        },
+        "pausar_actual": {
+          "name": "Pausar el biberón en curso",
+          "description": "Con un biberón de la reserva: el biberón en curso queda en pausa para seguir después (apagado = se tira)."
         }
       }
     },
@@ -488,6 +496,10 @@
         "bebe": {
           "name": "Bebé",
           "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
+        },
+        "reserva_id": {
+          "name": "De la reserva",
+          "description": "Este biberón salió de ese biberón de la reserva: pasa a ser leche materna con sus datos y el de la reserva se quita (no cuenta como desechado)."
         }
       }
     },

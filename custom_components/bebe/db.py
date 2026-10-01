@@ -342,6 +342,19 @@ class BebeDB:
         return {"id": bid, "reabierto": prev["id"] if prev else None}
 
     def corregir_biberon(self, bid: int, cambios: dict[str, Any], lim: Limites | float) -> dict[str, Any]:
+        """reserva_id: el biberón salió de esa leche de la reserva; pasa a ser materna con sus datos
+        (cuándo se hizo, dónde, extracción) y el de la reserva se quita sin contar como desechado."""
+        cambios = dict(cambios)
+        with self._con() as con:
+            if cambios.get("reserva_id"):
+                r = self._de_reserva(con, cambios["reserva_id"])
+                actual = self._biberon(con, bid)
+                if not actual or actual["en_reserva"]:
+                    raise ErrorBebe("biberon_no_existe", id=bid)
+                cambios.update(tipo="materna", hecho=r["hecho"], ubicacion=r["ubicacion"],
+                               oz=cambios.get("oz") or max(r["oz"], actual["consumido"]))
+                con.execute("UPDATE biberones SET extraccion_id = ? WHERE id = ?", (r["extraccion_id"], bid))
+                con.execute("UPDATE biberones SET borrado = 1 WHERE id = ?", (r["id"],))
         campos = [c for c in ("oz", "tipo", "nota", "hecho", "ubicacion") if c in cambios]
         with self._con() as con:
             if campos:
@@ -349,6 +362,9 @@ class BebeDB:
                     f"UPDATE biberones SET {', '.join(f'{c} = ?' for c in campos)} WHERE id = ? AND borrado = 0",
                     [cambios[c] for c in campos] + [bid],
                 )
+            if "tipo" in cambios:
+                # Las tomas son del tipo de leche de su biberón
+                con.execute("UPDATE tomas SET tipo = ? WHERE biberon_id = ? AND borrado = 0", (cambios["tipo"], bid))
             if "hecho" in cambios:
                 # En reserva, la fecha de preparación es la de cuando se hizo
                 con.execute("UPDATE biberones SET preparado = hecho WHERE id = ? AND en_reserva = 1", (bid,))
@@ -382,6 +398,12 @@ class BebeDB:
             "VALUES (?, ?, 'materna', ?, ?, ?, ?, 1, ?)",
             (hecho, oz, nota, ahora_iso(), hecho, ubicacion, extraccion_id),
         ).lastrowid
+
+    def _de_reserva(self, con: sqlite3.Connection, bid: int) -> dict[str, Any]:
+        b = self._biberon(con, bid)
+        if not b or not b["en_reserva"]:
+            raise ErrorBebe("no_en_reserva", id=bid)
+        return b
 
     def reservas(self, lim: Limites) -> list[dict[str, Any]]:
         with self._con() as con:
@@ -471,7 +493,7 @@ class BebeDB:
         self, *, fin: str, oz: float | None, tipo: str | None, fuente: str, confianza: str,
         usuario: str | None, nota: str | None, nuevo_biberon: bool, oz_sobrantes: float | None,
         acumular_s: int, oz_default: float, lim: Limites | float, en_vivo: bool,
-        tipo_biberon: str = "formula",
+        tipo_biberon: str = "formula", reserva_id: int | None = None, pausar_actual: bool = True,
     ) -> dict[str, Any]:
         """Registra oz tomadas en el biberón que corresponda.
 
@@ -482,12 +504,24 @@ class BebeDB:
         - acumular_s > 0: si la última toma del biberón es de la misma fuente y de hace menos de
           acumular_s segundos, se suma a ella (toques seguidos del botón = una toma).
         - en_vivo solo afecta si se avisa de "biberón nuevo" (no para tomas con hora pasada).
+        - reserva_id: la toma es de ese biberón de la reserva, que pasa a ser el biberón en curso;
+          el que estaba en curso queda en pausa (pausar_actual) o se cierra.
+        - La toma es del tipo de leche de su biberón; `tipo` solo decide el de un biberón nuevo.
         """
         with self._con() as con:
             anterior = None
             creado = False
-            b = None if nuevo_biberon else self._abierto(con)
-            if b is None:
+            b = None if nuevo_biberon or reserva_id else self._abierto(con)
+            if reserva_id:
+                self._de_reserva(con, reserva_id)
+                anterior = self._abierto(con)
+                if not pausar_actual:
+                    self._cerrar_abiertos(con, fin)
+                con.execute("UPDATE biberones SET en_reserva = 0, preparado = ?, activado = ? WHERE id = ?",
+                            (fin, marca_iso(), reserva_id))
+                b = self._biberon(con, reserva_id)
+                creado = True
+            elif b is None:
                 ult = con.execute(
                     "SELECT id FROM biberones WHERE borrado = 0 AND en_reserva = 0 ORDER BY id DESC LIMIT 1"
                 ).fetchone()
@@ -507,7 +541,7 @@ class BebeDB:
 
             en_b = _r(min(oz, restante))
             exceso = _r(oz - en_b)
-            toma_id = self._sumar_toma(con, b["id"], en_b, fin, tipo or b["tipo"], fuente, confianza,
+            toma_id = self._sumar_toma(con, b["id"], en_b, fin, b["tipo"], fuente, confianza,
                                        usuario, nota, acumular_s)
             ids = [toma_id]
             biberon_nuevo = creado and en_vivo

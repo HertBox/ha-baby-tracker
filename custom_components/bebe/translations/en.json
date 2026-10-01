@@ -262,6 +262,14 @@
         "bebe": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
+        },
+        "reserva_id": {
+          "name": "Stash bottle",
+          "description": "The feeding is from this breast milk stash bottle (see List stash), which becomes the current bottle."
+        },
+        "pausar_actual": {
+          "name": "Pause current bottle",
+          "description": "With a stash bottle: keep the current bottle paused to continue it afterwards (off = discard it)."
         }
       }
     },
@@ -488,6 +496,10 @@
         "bebe": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
+        },
+        "reserva_id": {
+          "name": "From stash bottle",
+          "description": "This bottle was made from that stash bottle: it becomes breast milk with its details, and the stash bottle is removed (not counted as wasted)."
         }
       }
     },
