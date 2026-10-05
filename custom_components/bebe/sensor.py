@@ -106,6 +106,13 @@ SENSORES: tuple[BebeSensorDescription, ...] = (
         valor=lambda d: d["avance_meta"],
     ),
     BebeSensorDescription(
+        # Cuánto debería llevar a esta hora (meta mínima); el ideal y el plan van en atributos
+        key="referencia_ahora", translation_key="referencia_ahora", icon="mdi:chart-timeline-variant",
+        native_unit_of_measurement="oz", state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1, valor=lambda d: d["referencia"]["esperado_minimo"],
+        atributos=lambda d: {k: v for k, v in d["referencia"].items() if k != "esperado_minimo"},
+    ),
+    BebeSensorDescription(
         key="peso", translation_key="peso", device_class=SensorDeviceClass.WEIGHT,
         native_unit_of_measurement=UnitOfMass.KILOGRAMS, suggested_display_precision=2,
         valor=lambda d: d["peso"]["peso_kg"] if d["peso"] else None,

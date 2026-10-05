@@ -77,11 +77,12 @@ function edadTexto(dias) {
 }
 
 // Gráfica de barras SVG; series apiladas; línea de meta opcional.
-function barras({ etiquetas, series, meta, unidad, alto = 180 }) {
+// lineas: metas que pueden cambiar por barra [{nombre, valores: [...], clase, abajo}] (línea escalonada)
+function barras({ etiquetas, series, meta, lineas = [], unidad, alto = 180 }) {
   const W = 640, H = alto, izq = 34, abajo = 26, arriba = 12;
   const n = etiquetas.length || 1;
   const totales = etiquetas.map((_, i) => series.reduce((s, se) => s + (se.valores[i] || 0), 0));
-  const max = Math.max(1, meta || 0, ...totales) * 1.12;
+  const max = Math.max(1, meta || 0, ...totales, ...lineas.flatMap((l) => l.valores.filter((v) => v))) * 1.12;
   const y = (v) => arriba + (H - arriba - abajo) * (1 - v / max);
   const ancho = (W - izq - 8) / n, bw = Math.max(4, ancho * 0.66);
   let svg = `<svg viewBox="0 0 ${W} ${H}" class="grafica" role="img">`;
@@ -107,6 +108,19 @@ function barras({ etiquetas, series, meta, unidad, alto = 180 }) {
     if (n <= 16 || i % Math.ceil(n / 12) === 0) {
       svg += `<text x="${x + bw / 2}" y="${H - 8}" class="eje" text-anchor="middle">${esc(et)}</text>`;
     }
+  });
+  lineas.forEach((l) => {
+    let d = "", ultimo = null;
+    l.valores.forEach((v, i) => {
+      if (!v) { ultimo = null; return; }
+      const x0 = izq + ancho * i, x1 = x0 + ancho, yy = y(v);
+      d += `${ultimo === null ? "M" : "L"}${x0},${yy} L${x1},${yy} `;
+      ultimo = v;
+    });
+    const fin = [...l.valores].reverse().find((v) => v);
+    if (!d || !fin) return;
+    svg += `<path d="${d}" class="${l.clase}" fill="none"><title>${esc(l.nombre)}</title></path>`
+         + `<text x="${W - 6}" y="${y(fin) + (l.abajo ? 13 : -4)}" class="${l.clase}-txt" text-anchor="end">${esc(l.nombre)} ${num(fin, 1)}</text>`;
   });
   if (meta) {
     svg += `<line x1="${izq}" x2="${W - 4}" y1="${y(meta)}" y2="${y(meta)}" class="meta"/>`
@@ -381,11 +395,11 @@ class BebePanel extends HTMLElement {
     const pct = this._num("pct_terminados"), ritmo = this._num("ritmo_oz_hora");
     const ph = this._st("panales_hoy"), tp = ph ? ph.attributes : {};
     k.innerHTML = `
-      <div class="kpi completo">
+      ${this._htmlMetaHoy(ozHoy) || `<div class="kpi completo">
         <div class="etq">${t("Hoy: {a} de {b} · {c} tomas · {d} biberones · {e} pañales", { a: cantN(ozHoy, 1), b: cant(meta, 1), c: this._val("tomas_hoy") ?? 0, d: this._val("biberones_hoy") ?? 0, e: this._val("panales_hoy") ?? 0 })}</div>
         <div class="progreso"><div style="width:${avance}%"></div></div>
         <div class="sub">${t("{p}% de la meta", { p: avance })} · ${Math.round(ozHoy * ML_POR_OZ)} ml</div>
-      </div>
+      </div>`}
       <div class="kpi"><div class="etq">${t("Ritmo (últimas 24 h)")}</div><div class="num">${cantN(ritmo, 2)} <small>${U()}/h</small></div>
         <div class="sub">${t("meta")} ${meta ? cant(meta / 24, 2) : "—"}/h</div></div>
       <div class="kpi"><div class="etq">${t("Por toma (7 d)")}</div><div class="num">${cantN(this._num("oz_por_toma"), 2)} <small>${U()}</small></div>
@@ -396,6 +410,51 @@ class BebePanel extends HTMLElement {
         <div class="sub">${t("desechado")} ${cant(this._num("desechado_7d"), 1)}</div></div>
       <div class="kpi"><div class="etq">${t("Edad")}</div><div class="num sm">${edadTexto(this._val("edad"))}</div></div>
       <div class="kpi"><div class="etq">${t("Peso · Talla")}</div><div class="num sm">${num(this._num("peso"), 2)} kg · ${num(this._num("talla"), 1)} cm</div></div>`;
+  }
+
+  // Avance del día contra dos metas: mínimo e ideal (la menor y la mayor entre la del pediatra y la de peso)
+  _htmlMetaHoy(ozHoy) {
+    const s = this._st("referencia_ahora");
+    if (!s || ["unknown", "unavailable"].includes(s.state)) return "";
+    const r = { esperado_minimo: Number(s.state), ...s.attributes };
+    const pctDe = (v) => Math.max(0, Math.min(100, v / r.meta_ideal * 100));
+    const rango = (a, b) => (a === b ? `~${cant(a, 1)}` : `~${cantN(a, 1)}–${cant(b, 1)}`);
+    const una = r.meta_minimo === r.meta_ideal;
+    const fuenteMin = r.fuente_minimo === "peso" ? t("por peso") : t("pediatra");
+    const fuenteIdeal = r.fuente_minimo === "peso" ? t("pediatra") : t("por peso");
+    const estados = {
+      ideal: ["✅", una ? t("Va al ritmo de la meta") : t("Va al ritmo del ideal")],
+      minimo: ["🟡", t("Arriba del mínimo, abajo del ideal")],
+      atrasado: ["🔴", una ? t("Va abajo de la meta ({d})", { d: cant(r.diferencia_minimo, 1) }) : t("Va abajo del mínimo ({d})", { d: cant(r.diferencia_minimo, 1) })],
+    };
+    const [icono, texto] = r.logro_hoy === 2 ? ["🎉", una ? t("Ya cumplió la meta del día") : t("Ya cumplió el ideal del día")]
+      : r.logro_hoy === 1 && !una ? ["✅", t("Ya cumplió el mínimo del día")] : estados[r.estado] || estados.minimo;
+    const porToma = (v) => (v === null || v === undefined ? "—" : v === 0 ? "✓"
+      : v > r.tope_por_toma ? t("más de {c} (no alcanza sin forzar)", { c: cant(r.tope_por_toma, 1) }) : `~${cant(v, 1)}`);
+    const dias = r.dias_7d || [];
+    return `
+      <div class="kpi completo">
+        <div class="etq">${t("Hoy: {a} · {c} tomas · {d} biberones · {e} pañales", { a: cant(ozHoy, 1), c: this._val("tomas_hoy") ?? 0, d: this._val("biberones_hoy") ?? 0, e: this._val("panales_hoy") ?? 0 })}</div>
+        <div class="progreso ref" title="${t("Zona sombreada: dónde debería ir a esta hora")}">
+          <div class="relleno ${r.estado}" style="width:${pctDe(ozHoy)}%"></div>
+          <div class="banda" style="left:${pctDe(r.esperado_minimo)}%;width:${Math.max(1, pctDe(r.esperado_ideal) - pctDe(r.esperado_minimo))}%"></div>
+          ${una ? "" : `<div class="marca" style="left:${pctDe(r.meta_minimo)}%"></div>`}
+        </div>
+        <div class="estado-ref ${r.estado}">${icono} ${texto}</div>
+        <div class="sub">${t("A esta hora debería llevar {r}", { r: rango(r.esperado_minimo, r.esperado_ideal) })}</div>
+        <div class="sub">${una
+          ? t("Meta del día: {a} ({f})", { a: cant(r.meta_minimo, 1), f: t("pediatra") }) + ` · ${t("registra su peso para tener también la referencia por peso")}`
+          : t("Meta del día: mínimo {a} ({fa}) · ideal {b} ({fb})", { a: cant(r.meta_minimo, 1), fa: fuenteMin, b: cant(r.meta_ideal, 1), fb: fuenteIdeal })}</div>
+        ${r.tomas_restantes ? `<div class="sub">${una
+          ? t("Para llegar: {a} por toma en {n} tomas", { a: porToma(r.por_toma_minimo), n: r.tomas_restantes })
+          : t("Para llegar: mínimo {a} · ideal {b} por toma en {n} tomas", { a: porToma(r.por_toma_minimo), b: porToma(r.por_toma_ideal), n: r.tomas_restantes })}</div>` : ""}
+        ${(r.proximas || []).length ? `<div class="proximas">${r.proximas.map((p) =>
+          `<span class="chip-ref"><b>${hora(p.hora)}</b> ${rango(p.minimo, p.ideal)}</span>`).join("")}</div>` : ""}
+        ${dias.length ? `<div class="dias7"><span class="sub">${t("Últimos {n} días", { n: dias.length })}</span>
+          ${dias.map((d) => `<span class="punto l${d.logro}" title="${DIAS[new Date(`${d.fecha}T12:00`).getDay()]} ${d.fecha.slice(8)}: ${cant(d.oz, 1)}"></span>`).join("")}
+          <span class="sub">${una ? t("meta {a}/{n}", { a: r.dias_minimo_7d, n: dias.length })
+            : t("mínimo {a}/{n} · ideal {b}/{n}", { a: r.dias_minimo_7d, b: r.dias_ideal_7d, n: dias.length })}</span></div>` : ""}
+      </div>`;
   }
 
   // Lo más importante: última toma y siguiente
@@ -1111,6 +1170,21 @@ class BebePanel extends HTMLElement {
     });
   }
 
+  // Mínimo e ideal de cada día (cada día con el peso que tenía); en semanas/meses, las metas actuales
+  _metasGrafica(grupos, meta) {
+    const ref = this._st("referencia_ahora"), a = ref && ref.attributes;
+    if (!a || a.meta_minimo === undefined) return { meta: meta ? aUnidad(meta) : null };
+    const porFecha = Object.fromEntries(((this._st("oz_hoy") || {}).attributes?.serie_diaria || [])
+      .filter((d) => d.meta_minimo).map((d) => [d.fecha, d]));
+    const valor = (g, k) => aUnidad((this._periodo === "dia" && porFecha[fechaISO(g.a)]?.[k]) || a[k]);
+    const minimos = grupos.map((g) => valor(g, "meta_minimo")), ideales = grupos.map((g) => valor(g, "meta_ideal"));
+    if (minimos.every((v, i) => v === ideales[i])) return { lineas: [{ nombre: t("meta"), valores: ideales, clase: "meta" }] };
+    return { lineas: [
+      { nombre: t("ideal"), valores: ideales, clase: "meta" },
+      { nombre: t("mínimo"), valores: minimos, clase: "meta-min", abajo: true },
+    ] };
+  }
+
   async _pintarGraficas() {
     const hoy = inicioDia(new Date());
     const p = this._periodo;
@@ -1169,7 +1243,7 @@ class BebePanel extends HTMLElement {
     const EN_OZ = ["exacto", "estimado", "ozToma", "desechado", "extraido"];
     const serie = (clave, nombre, c, op) => ({ nombre, valores: agg.map((x) => (EN_OZ.includes(clave) ? aUnidad(x[clave]) : x[clave])), color: c, opacidad: op });
     r.getElementById("t-oz").textContent = `${esMl() ? "ml" : t("Oz")} ${suf}`;
-    r.getElementById("g-oz").innerHTML = barras({ etiquetas, unidad: U(), meta: meta ? aUnidad(meta) : null,
+    r.getElementById("g-oz").innerHTML = barras({ etiquetas, unidad: U(), ...this._metasGrafica(grupos, meta),
       series: [serie("exacto", TIPOS.formula, color), serie("estimado", TIPOS.materna, "var(--materna-color, #e91e63)")] });
     r.getElementById("t-tomas").textContent = `${t("Tomas")} ${suf}`;
     r.getElementById("g-tomas").innerHTML = barras({ etiquetas, unidad: t("tomas"), meta: intervalo ? 24 / intervalo : null,
@@ -1282,6 +1356,22 @@ input, select { font:inherit; font-size:16px; padding:9px 10px; border-radius:8p
 .fila-titulo h2 { margin:0; }
 .secundario.chico { width:auto; margin:0; padding:8px 12px; font-size:14px; }
 .progreso.grande-p { height:16px; border-radius:8px; margin:12px 0 6px; }
+.progreso.ref { position:relative; height:14px; border-radius:7px; }
+.progreso.ref .relleno { position:absolute; left:0; top:0; }
+.progreso.ref .relleno.ideal { background:var(--success-color, #43a047); }
+.progreso.ref .relleno.minimo { background:var(--primary-color); }
+.progreso.ref .relleno.atrasado { background:var(--warning-color, #ff9800); }
+.progreso.ref .banda { position:absolute; top:0; background:var(--primary-text-color); opacity:.22; }
+.progreso.ref .marca { position:absolute; top:0; width:2px; background:var(--primary-text-color); opacity:.6; }
+.estado-ref { font-size:14px; font-weight:500; margin:2px 0; }
+.estado-ref.atrasado { color:var(--warning-color, #e65100); }
+.proximas { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; }
+.chip-ref { font-size:12px; padding:3px 8px; border-radius:10px; background:var(--secondary-background-color, rgba(127,127,127,.12)); }
+.dias7 { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-top:6px; }
+.dias7 .sub { margin:0; }
+.punto { width:11px; height:11px; border-radius:50%; border:1.5px solid var(--divider-color); box-sizing:border-box; }
+.punto.l1 { background:var(--primary-color); border-color:var(--primary-color); }
+.punto.l2 { background:var(--success-color, #43a047); border-color:var(--success-color, #43a047); }
 .bib-info { font-size:16px; }
 .alerta-txt { color:var(--error-color, #db4437); font-size:13px; margin-top:6px; }
 .pregunta { margin-top:14px; font-size:13px; }
@@ -1341,6 +1431,8 @@ h2.sep { margin-top:18px; }
 .valor { fill:var(--primary-text-color); font-size:10px; }
 .meta { stroke:var(--error-color, #db4437); stroke-width:2; stroke-dasharray:6 4; }
 .meta-txt { fill:var(--error-color, #db4437); font-size:11px; }
+.meta-min { stroke:var(--warning-color, #ff9800); stroke-width:2; stroke-dasharray:2 4; stroke-linecap:round; }
+.meta-min-txt { fill:var(--warning-color, #e65100); font-size:11px; }
 .linea { fill:none; stroke:var(--primary-color); stroke-width:2.5; }
 .punto { fill:var(--primary-color); }
 .leyenda { display:flex; gap:6px; align-items:center; font-size:12px; color:var(--secondary-text-color); margin-top:6px; flex-wrap:wrap; }
@@ -1391,6 +1483,23 @@ const EN = {
   "Tomó {c} · biberón {a}/{b}": "Drank {c} · bottle {a}/{b}", "se empezó un biberón nuevo": "a new bottle was started",
   "Biberón nuevo de {c}": "New {c} bottle", "el anterior quedó en {a}/{b}": "the previous one ended at {a}/{b}",
   "Hoy: {a} de {b} · {c} tomas · {d} biberones · {e} pañales": "Today: {a} of {b} · {c} feedings · {d} bottles · {e} diapers",
+  "ideal": "ideal", "mínimo": "minimum", "por peso": "by weight", "pediatra": "pediatrician",
+  "Va al ritmo de la meta": "On pace for the goal", "Va al ritmo del ideal": "On pace for the ideal",
+  "Arriba del mínimo, abajo del ideal": "Above the minimum, below the ideal",
+  "Va abajo de la meta ({d})": "Behind the goal ({d})", "Va abajo del mínimo ({d})": "Behind the minimum ({d})",
+  "Ya cumplió la meta del día": "Daily goal reached", "Ya cumplió el ideal del día": "Daily ideal reached",
+  "Ya cumplió el mínimo del día": "Daily minimum reached",
+  "más de {c} (no alcanza sin forzar)": "over {c} (not reachable without forcing)",
+  "Hoy: {a} · {c} tomas · {d} biberones · {e} pañales": "Today: {a} · {c} feedings · {d} bottles · {e} diapers",
+  "Zona sombreada: dónde debería ir a esta hora": "Shaded zone: where intake should be by now",
+  "A esta hora debería llevar {r}": "By now intake should be {r}",
+  "Meta del día: {a} ({f})": "Daily goal: {a} ({f})",
+  "registra su peso para tener también la referencia por peso": "log the weight to also get the weight-based reference",
+  "Meta del día: mínimo {a} ({fa}) · ideal {b} ({fb})": "Daily goal: minimum {a} ({fa}) · ideal {b} ({fb})",
+  "Para llegar: {a} por toma en {n} tomas": "To get there: {a} per feeding over {n} feedings",
+  "Para llegar: mínimo {a} · ideal {b} por toma en {n} tomas": "To get there: minimum {a} · ideal {b} per feeding over {n} feedings",
+  "Últimos {n} días": "Last {n} days", "meta {a}/{n}": "goal {a}/{n}",
+  "mínimo {a}/{n} · ideal {b}/{n}": "minimum {a}/{n} · ideal {b}/{n}",
   "{p}% de la meta": "{p}% of goal", "Ritmo (últimas 24 h)": "Rate (last 24 h)", "Por toma (7 d)": "Per feeding (7 d)",
   "{n} tomas/día · cada {h} h": "{n} feedings/day · every {h} h", "Pañales hoy": "Diapers today",
   "{n}/día (7 d) · cada {h} h": "{n}/day (7 d) · every {h} h", "Biberones terminados (7 d)": "Bottles finished (7 d)",

@@ -144,6 +144,9 @@
       "avance_meta": {
         "name": "Goal progress"
       },
+      "referencia_ahora": {
+        "name": "Expected by now"
+      },
       "peso": {
         "name": "Weight"
       },

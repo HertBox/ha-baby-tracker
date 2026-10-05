@@ -3,6 +3,17 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico (MAYOR.MENOR.PARCHE).
 Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones menores.
 
+## [1.1.0] - 2026-10-05
+### Agregado
+- Referencia del día en **Hoy**: dos metas, **mínimo** e **ideal** (la menor y la mayor entre la del pediatra y la
+  referencia por peso; cada día se evalúa con el peso vigente ese día). La barra marca dónde debería ir a esta hora
+  (con margen de una toma), cuánto falta por toma para llegar a cada meta (sin sugerir más de lo indicado + 1 oz),
+  lo esperado en las próximas tomas del día y qué metas se cumplieron en los últimos 7 días.
+- Sensor `referencia_ahora` ("Referencia a esta hora"): lo esperado según el mínimo; el ideal, las metas, el plan de
+  próximas tomas y los días cumplidos van en atributos. La serie diaria de `oz_hoy` incluye `meta_minimo`,
+  `meta_ideal` y `logro` por día.
+- Gráficas: la de cantidad por día muestra las líneas del mínimo y del ideal (escalonadas cuando cambia el peso).
+
 ## [1.0.0] - 2026-10-01
 Primera versión pública. Incluye todo lo de 0.4.0 y 0.5.0 (abajo).
 ### Corregido

@@ -59,6 +59,16 @@ def _parse(iso: str) -> datetime:
     return dt_util.as_local(dt_util.parse_datetime(iso))
 
 
+def _por_peso(peso_kg: float) -> float:
+    """Referencia general por peso (~150 ml/kg/día, con tope), en oz/día."""
+    return round(min(peso_kg * ML_POR_KG_DIA / ML_POR_OZ, OZ_DIA_MAX), 1)
+
+
+def _logro(oz: float, minimo: float, ideal: float) -> int:
+    """0 = no llegó al mínimo, 1 = mínimo, 2 = ideal (con margen de redondeo)."""
+    return 2 if oz >= ideal - 0.05 else 1 if oz >= minimo - 0.05 else 0
+
+
 class BebeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Recalcula KPIs cada 5 min y después de cada registro."""
 
@@ -187,12 +197,11 @@ class BebeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         peso_kg = peso["peso_kg"] if peso else None
         tomas_meta = 24 / rt.intervalo_indicado_h
         meta = round(rt.meta_oz_toma * tomas_meta, 1)
-        referencia_peso = (
-            round(min(peso_kg * ML_POR_KG_DIA / ML_POR_OZ, OZ_DIA_MAX), 1)
-            if peso_kg else None
-        )
+        referencia_peso = _por_peso(peso_kg) if peso_kg else None
+        referencia = self._referencia(rt, ahora, hoy, inicio_hoy, hoy_d["oz"], meta, proxima, serie, primer_dia)
 
         return {
+            "referencia": referencia,
             "ultima": ultima,
             "ultima_fin": ultima_fin,
             "oz_hoy": round(hoy_d["oz"], 2),
@@ -237,4 +246,76 @@ class BebeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "reserva_oz": round(sum(b["restante"] for b in vigentes), 2),
             "proxima_caducidad": _parse(proxima_caducidad) if proxima_caducidad else None,
             "serie": serie,
+        }
+
+    def _referencia(self, rt: BebeRuntime, ahora: datetime, hoy: date, inicio_hoy: datetime, oz_hoy: float,
+                    meta_pediatra: float, proxima: datetime | None, serie: list[dict[str, Any]],
+                    primer_dia: date) -> dict[str, Any]:
+        """Cuánto debería llevar a esta hora, según dos metas del día: la del pediatra y la de
+        referencia por peso (cada día con el peso vigente ese día). La menor es el mínimo y la
+        mayor el ideal, así que se intercambian solas cuando la de peso rebasa a la del pediatra."""
+        pesos = [(_parse(m["fecha"]).date(), m["peso_kg"]) for m in self.db.medidas() if m["peso_kg"]]
+
+        def metas(dia: date) -> tuple[float, float, str | None]:
+            vigente = [p for f, p in pesos if f <= dia]
+            por_peso = _por_peso(vigente[-1]) if vigente else None
+            if por_peso is None:
+                return meta_pediatra, meta_pediatra, None
+            return min(por_peso, meta_pediatra), max(por_peso, meta_pediatra), (
+                "peso" if por_peso <= meta_pediatra else "pediatra")
+
+        for s in serie:
+            minimo, ideal, _ = metas(date.fromisoformat(s["fecha"]))
+            s.update(meta_minimo=minimo, meta_ideal=ideal, logro=_logro(s["oz"], minimo, ideal))
+        # Últimos 7 días completos (sin hoy) desde el primer registro
+        dias7 = [s for s in serie[-8:-1] if date.fromisoformat(s["fecha"]) >= primer_dia]
+
+        minimo, ideal, fuente_minimo = metas(hoy)
+        fin_hoy = dt_util.start_of_local_day(hoy + timedelta(days=1))
+        dia = fin_hoy - inicio_hoy  # 23 o 25 h en días con cambio de horario
+
+        def esperado(meta: float, cuando: datetime) -> float:
+            return round(meta * ((cuando - inicio_hoy) / dia), 1)
+
+        esp_min, esp_ideal = esperado(minimo, ahora), esperado(ideal, ahora)
+        # Margen de una toma: justo antes de comer es normal ir una toma por debajo de la línea
+        margen = rt.intervalo_indicado_h / 24
+        if oz_hoy >= esp_ideal - ideal * margen:
+            estado = "ideal"
+        elif oz_hoy >= esp_min - minimo * margen:
+            estado = "minimo"
+        else:
+            estado = "atrasado"
+
+        # Tomas que quedan hoy según el intervalo indicado, desde la siguiente toma
+        cuando = max(proxima, ahora) if proxima else ahora
+        proximas = []
+        while cuando < fin_hoy:
+            proximas.append({"hora": cuando.isoformat(timespec="seconds"),
+                             "minimo": esperado(minimo, cuando), "ideal": esperado(ideal, cuando)})
+            cuando += timedelta(hours=rt.intervalo_indicado_h)
+        n = len(proximas)
+
+        def por_toma(meta: float) -> float | None:
+            return round(max(0.0, meta - oz_hoy) / n, 2) if n else None
+
+        return {
+            "meta_minimo": minimo,
+            "meta_ideal": ideal,
+            "fuente_minimo": fuente_minimo,  # "peso", "pediatra" o None (sin peso registrado)
+            "esperado_minimo": esp_min,
+            "esperado_ideal": esp_ideal,
+            "diferencia_minimo": round(oz_hoy - esp_min, 1),
+            "diferencia_ideal": round(oz_hoy - esp_ideal, 1),
+            "estado": estado,
+            "logro_hoy": _logro(oz_hoy, minimo, ideal),
+            "tomas_restantes": n,
+            "por_toma_minimo": por_toma(minimo),
+            "por_toma_ideal": por_toma(ideal),
+            # Más de esto por toma ya no es "preparar un poco más": no se persigue la meta forzando
+            "tope_por_toma": round(rt.meta_oz_toma + 1, 2),
+            "proximas": proximas,
+            "dias_7d": [{"fecha": s["fecha"], "oz": s["oz"], "logro": s["logro"]} for s in dias7],
+            "dias_minimo_7d": sum(s["logro"] >= 1 for s in dias7),
+            "dias_ideal_7d": sum(s["logro"] == 2 for s in dias7),
         }

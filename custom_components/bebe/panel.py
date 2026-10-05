@@ -25,7 +25,7 @@ CLAVES = {
                "biberon_restante", "biberon_vence", "oz_por_toma", "tomas_por_dia",
                "biberones_hoy", "pct_terminados", "desechado_7d", "materna_hoy", "formula_hoy",
                "extraido_hoy", "extraido_dia", "reserva_oz", "reserva_caduca", "materna_desechada_7d",
-               "ritmo_oz_hora", "ultimo_panal", "ultimo_pipi", "ultima_popo", "panales_hoy",
+               "ritmo_oz_hora", "referencia_ahora", "ultimo_panal", "ultimo_pipi", "ultima_popo", "panales_hoy",
                "panales_por_dia", "intervalo_panales"],
     "number": ["oz_por_biberon", "meta_oz_toma", "intervalo_indicado", "limite_biberon",
                "limite_materna", "caducidad_ambiente", "caducidad_refri"],

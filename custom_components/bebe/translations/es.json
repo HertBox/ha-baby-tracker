@@ -144,6 +144,9 @@
       "avance_meta": {
         "name": "Avance de meta"
       },
+      "referencia_ahora": {
+        "name": "Referencia a esta hora"
+      },
       "peso": {
         "name": "Peso"
       },

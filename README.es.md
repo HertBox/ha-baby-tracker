@@ -26,7 +26,10 @@ asistente de voz. Todo se guarda **localmente** en tu Home Assistant (SQLite): s
 - **Leche materna**: extracciones (izquierdo/derecho), **reserva** (refrigerador / ambiente) con caducidad; eliges qué
   biberón de la reserva usar (primero el que caduca antes) y se descuenta; pausar la fórmula mientras das materna y continuarla después.
 - **Pañales**: pipí, popó o ambos; color y consistencia de la popó con la "habitual" de tu bebé ya marcada.
-- **Hoy de un vistazo**: última y siguiente toma (grandes), biberón en curso, pañales, avance de la meta, ritmo por hora.
+- **Hoy de un vistazo**: última y siguiente toma (grandes), biberón en curso, pañales, ritmo por hora y cuánto
+  *debería llevar a esta hora* contra dos metas del día: un **mínimo** y un **ideal** (la menor y la mayor entre la
+  indicación del pediatra y la referencia por peso, que sigue al último peso registrado). Muestra cuánto falta por toma
+  para llegar a cada una, lo esperado en las próximas tomas y qué metas se cumplieron en cada uno de los últimos 7 días.
 - **Gráficas** por día, semana o mes: cantidad por día (fórmula vs materna), tomas, cantidad por toma, biberones,
   % terminados, fórmula desechada, leche extraída, pañales, y *a qué horas* come o se cambia.
 - **Indicación del pediatra**: cantidad por toma e intervalo; la meta diaria y el recordatorio la siguen.

@@ -25,7 +25,10 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
   choose which stash bottle to use (soonest to expire first) and it is deducted from the stash; pause the formula bottle
   while giving breast milk and resume it later.
 - **Diapers** — pee, poop or both; color and consistency for poop with your baby's "usual" preselected.
-- **Today at a glance** — last and next feeding (big), current bottle, diapers, daily goal progress, rate per hour.
+- **Today at a glance** — last and next feeding (big), current bottle, diapers, rate per hour, and how much the baby
+  *should have had by now* against two daily goals: a **minimum** and an **ideal** (the lower and higher of the
+  pediatrician's goal and the weight-based reference, which follows the latest weight). Shows how much per feeding is
+  left to reach each one, the expected amount at the next feedings, and which goals were met on each of the last 7 days.
 - **Charts** by day, week or month: amount per day (formula vs breast milk), feedings, amount per feeding, bottles,
   % finished, wasted formula, pumped milk, diapers, and *when* the baby eats / needs a change.
 - **Pediatrician's plan** — amount per feeding and interval; the daily goal and the reminder follow it.
@@ -112,7 +115,7 @@ Every response includes `bebe`, `nombre` and `unidad`, handy for your own notifi
 
 ## Sensors
 
-Per baby: last / next feeding, amount today, feedings today, last 24 h, 7-day average, interval, daily goal, goal progress,
+Per baby: last / next feeding, amount today, feedings today, last 24 h, 7-day average, interval, daily goal, goal progress, expected by now,
 rate per hour, current bottle remaining / use-by, amount per feeding, feedings per day, bottles today, % finished,
 wasted formula, breast milk / formula today, pumped today / average, stash and next expiry, last diaper / pee / poop,
 diapers today / per day, time between diapers, weight, length and age. Plus `number` entities for the settings.
