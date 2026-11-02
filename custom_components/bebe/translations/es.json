@@ -797,6 +797,52 @@
           "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
         }
       }
+    },
+    "marcar_hito": {
+      "name": "Marcar hito",
+      "description": "Marca un hito de desarrollo como observado.",
+      "fields": {
+        "hito_id": {
+          "name": "Hito",
+          "description": "Identificador del hito en el catálogo."
+        },
+        "fecha": {
+          "name": "Fecha",
+          "description": "Día en que lo notaron (por defecto, hoy)."
+        },
+        "nota": {
+          "name": "Nota",
+          "description": "Comentario opcional."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
+        }
+      }
+    },
+    "desmarcar_hito": {
+      "name": "Desmarcar hito",
+      "description": "Quita la marca de un hito de desarrollo.",
+      "fields": {
+        "hito_id": {
+          "name": "Hito",
+          "description": "Identificador del hito en el catálogo."
+        },
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
+        }
+      }
+    },
+    "listar_hitos": {
+      "name": "Listar hitos",
+      "description": "Devuelve los hitos de desarrollo marcados.",
+      "fields": {
+        "bebe": {
+          "name": "Bebé",
+          "description": "Solo si tienes varios bebés: a cuál aplica (por defecto, el único)."
+        }
+      }
     }
   },
   "title": "Baby Tracker",
@@ -891,6 +937,9 @@
     },
     "destino_invalido": {
       "message": "El destino debe ser 'nuevo' o 'anterior'"
+    },
+    "hito_no_existe": {
+      "message": "Ese hito no existe en el catálogo: {id}"
     }
   }
 }

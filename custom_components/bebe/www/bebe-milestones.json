@@ -1,0 +1,175 @@
+{
+  "source": {
+    "name": "CDC Learn the Signs. Act Early.",
+    "url": "https://www.cdc.gov/act-early/milestones/",
+    "checked": "2026-11-02",
+    "note": "months = CDC checkpoint: age by which most babies (about 75%) do this. Stage texts and optional steps are editorial."
+  },
+  "areas": {
+    "social": {"es": "Social", "en": "Social"},
+    "comunicacion": {"es": "Comunicación", "en": "Communication"},
+    "exploracion": {"es": "Exploración", "en": "Exploring"},
+    "movimiento": {"es": "Movimiento", "en": "Movement"}
+  },
+  "skills": [
+    {"id": "sonrisa", "area": "social", "es": "Sonrisa y risa", "en": "Smile & laugh", "steps": [
+      {"id": "sonrie_respuesta", "months": 2, "es": "Sonríe cuando le hablan o le sonríen", "en": "Smiles when you talk to or smile at them"},
+      {"id": "sonrie_solo", "months": 4, "es": "Sonríe por su cuenta para llamar la atención", "en": "Smiles on their own to get your attention"},
+      {"id": "risita", "months": 4, "es": "Suelta risitas cuando intentan hacerle reír", "en": "Chuckles when you try to make them laugh"},
+      {"id": "rie", "months": 6, "es": "Se ríe", "en": "Laughs"},
+      {"id": "rie_escondidas", "months": 9, "es": "Sonríe o se ríe jugando a las escondidas (\"¿dónde está?\")", "en": "Smiles or laughs at peek-a-boo"}
+    ]},
+    {"id": "vinculo", "area": "social", "es": "Vínculo con su gente", "en": "Bonding", "steps": [
+      {"id": "se_calma", "months": 2, "es": "Se calma cuando le hablan o le cargan", "en": "Calms down when spoken to or picked up"},
+      {"id": "mira_cara", "months": 2, "es": "Mira tu cara", "en": "Looks at your face"},
+      {"id": "contento_verte", "months": 2, "es": "Le da gusto verte llegar", "en": "Seems happy to see you walk up"},
+      {"id": "busca_atencion", "months": 4, "es": "Te mira, se mueve o hace sonidos para tener tu atención", "en": "Looks, moves or makes sounds to get or keep your attention"},
+      {"id": "reconoce", "months": 6, "es": "Reconoce a personas conocidas", "en": "Knows familiar people"},
+      {"id": "timido", "months": 9, "es": "Le da pena o miedo con extraños, o se aferra a ti", "en": "Is shy, clingy or fearful around strangers"},
+      {"id": "reacciona_vas", "months": 9, "es": "Reacciona cuando te vas (te mira, te busca o llora)", "en": "Reacts when you leave (looks, reaches for you or cries)"}
+    ]},
+    {"id": "expresion", "area": "social", "es": "Expresiones y juego", "en": "Expressions & play", "steps": [
+      {"id": "espejo", "months": 6, "es": "Le gusta verse en el espejo", "en": "Likes to look at self in a mirror"},
+      {"id": "gestos_cara", "months": 9, "es": "Muestra varias caras: alegría, tristeza, enojo, sorpresa", "en": "Shows several facial expressions: happy, sad, angry, surprised"},
+      {"id": "juegos", "months": 12, "es": "Juega contigo a juegos como las palmitas", "en": "Plays games with you, like pat-a-cake"}
+    ]},
+    {"id": "voz", "area": "comunicacion", "es": "Voz y balbuceo", "en": "Voice & babbling", "steps": [
+      {"id": "sonidos", "months": 2, "es": "Hace sonidos además de llorar", "en": "Makes sounds other than crying"},
+      {"id": "arrullos", "months": 4, "es": "Hace arrullos como \"oooo\" y \"aahh\"", "en": "Coos: \"oooo\", \"aahh\""},
+      {"id": "responde_sonidos", "months": 4, "es": "Hace sonidos de vuelta cuando le hablas", "en": "Makes sounds back when you talk"},
+      {"id": "turnos", "months": 6, "es": "Se turna contigo para hacer sonidos", "en": "Takes turns making sounds with you"},
+      {"id": "trompetillas", "months": 6, "es": "Hace trompetillas (saca la lengua y sopla)", "en": "Blows raspberries"},
+      {"id": "chillidos", "months": 6, "es": "Hace chillidos", "en": "Makes squealing noises"},
+      {"id": "balbuceo", "months": 9, "es": "Hace muchos sonidos distintos: \"mamamama\", \"babababa\"", "en": "Makes many different sounds: \"mamamama\", \"babababa\""},
+      {"id": "mama_papa", "months": 12, "es": "Le dice \"mamá\", \"papá\" u otro nombre especial a alguno de ustedes", "en": "Calls a parent \"mama\", \"dada\" or another special name"}
+    ]},
+    {"id": "oido", "area": "comunicacion", "es": "Oír y entender", "en": "Hearing & understanding", "steps": [
+      {"id": "ruidos", "months": 2, "es": "Reacciona a ruidos fuertes", "en": "Reacts to loud sounds"},
+      {"id": "voltea_voz", "months": 4, "es": "Voltea la cabeza hacia tu voz", "en": "Turns head towards your voice"},
+      {"id": "su_nombre", "months": 9, "es": "Voltea cuando dices su nombre", "en": "Looks when you call their name"},
+      {"id": "entiende_no", "months": 12, "es": "Entiende el \"no\" (se detiene un momento)", "en": "Understands \"no\" (pauses or stops)"}
+    ]},
+    {"id": "gestos", "area": "comunicacion", "es": "Gestos", "en": "Gestures", "steps": [
+      {"id": "brazos_arriba", "months": 9, "es": "Levanta los brazos para que le carguen", "en": "Lifts arms up to be picked up"},
+      {"id": "adios", "months": 12, "es": "Dice adiós con la mano", "en": "Waves bye-bye"}
+    ]},
+    {"id": "mirar", "area": "exploracion", "es": "Mirar y seguir", "en": "Looking & tracking", "steps": [
+      {"id": "te_sigue", "months": 2, "es": "Te sigue con la mirada cuando te mueves", "en": "Watches you as you move"},
+      {"id": "mira_juguete", "months": 2, "es": "Mira un juguete por varios segundos", "en": "Looks at a toy for several seconds"},
+      {"id": "mira_manos", "months": 4, "es": "Se mira las manos con interés", "en": "Looks at their hands with interest"}
+    ]},
+    {"id": "objetos", "area": "exploracion", "es": "Explorar cosas", "en": "Exploring objects", "steps": [
+      {"id": "a_la_boca", "months": 6, "es": "Se lleva cosas a la boca para explorarlas", "en": "Puts things in mouth to explore them"},
+      {"id": "alcanza", "months": 6, "es": "Estira la mano para agarrar un juguete que quiere", "en": "Reaches to grab a toy they want"},
+      {"id": "golpea", "months": 9, "es": "Golpea dos cosas entre sí", "en": "Bangs two things together"},
+      {"id": "recipiente", "months": 12, "es": "Mete algo en un recipiente, como un cubo en un vaso", "en": "Puts something in a container, like a block in a cup"}
+    ]},
+    {"id": "escondido", "area": "exploracion", "es": "Lo que se esconde", "en": "Hidden things", "steps": [
+      {"id": "busca_caido", "months": 9, "es": "Busca lo que se le cae y ya no ve", "en": "Looks for objects dropped out of sight"},
+      {"id": "busca_oculto", "months": 12, "es": "Busca lo que te ve esconder, como un juguete bajo una cobija", "en": "Looks for things they see you hide"}
+    ]},
+    {"id": "comida", "area": "exploracion", "es": "Señales de comida", "en": "Food signals", "steps": [
+      {"id": "abre_boca", "months": 4, "es": "Con hambre, abre la boca al ver el pecho o el biberón", "en": "If hungry, opens mouth at the breast or bottle"},
+      {"id": "cierra_labios", "months": 6, "es": "Cierra los labios para mostrar que ya no quiere", "en": "Closes lips to show they don't want more"}
+    ]},
+    {"id": "cabeza", "area": "movimiento", "es": "Cabeza y boca abajo", "en": "Head & tummy time", "steps": [
+      {"id": "cabeza_boca_abajo", "months": 2, "es": "Levanta la cabeza estando boca abajo", "en": "Holds head up when on tummy"},
+      {"id": "codos", "months": 4, "es": "Se apoya en codos o antebrazos boca abajo", "en": "Pushes up onto elbows or forearms on tummy"},
+      {"id": "cabeza_firme", "months": 4, "es": "Sostiene la cabeza firme, sin apoyo, cuando le cargas", "en": "Holds head steady without support when held"},
+      {"id": "brazos_rectos", "months": 6, "es": "Se empuja con los brazos rectos boca abajo", "en": "Pushes up with straight arms on tummy"}
+    ]},
+    {"id": "manos", "area": "movimiento", "es": "Brazos y manos", "en": "Arms & hands", "steps": [
+      {"id": "mueve_todo", "months": 2, "es": "Mueve los dos brazos y las dos piernas", "en": "Moves both arms and both legs"},
+      {"id": "abre_manos", "months": 2, "es": "Abre las manos por momentos", "en": "Opens hands briefly"},
+      {"id": "manos_boca", "months": 4, "es": "Se lleva las manos a la boca", "en": "Brings hands to mouth"},
+      {"id": "sostiene", "months": 4, "es": "Sostiene un juguete que le pones en la mano", "en": "Holds a toy put in their hand"},
+      {"id": "manotea", "months": 4, "es": "Manotea hacia los juguetes", "en": "Swings arm at toys"},
+      {"id": "cambia_mano", "months": 9, "es": "Pasa cosas de una mano a la otra", "en": "Moves things from one hand to the other"},
+      {"id": "rastrilla", "months": 9, "es": "Usa los dedos para arrastrar comida hacia sí", "en": "Uses fingers to rake food towards self"},
+      {"id": "pinza", "months": 12, "es": "Agarra cosas pequeñas con el pulgar y el índice", "en": "Picks things up between thumb and pointer finger"},
+      {"id": "vaso", "months": 12, "es": "Bebe de un vaso sin tapa mientras se lo sostienes", "en": "Drinks from a cup without a lid, as you hold it"}
+    ]},
+    {"id": "sentarse", "area": "movimiento", "es": "Rodar y sentarse", "en": "Rolling & sitting", "steps": [
+      {"id": "rueda", "months": 6, "es": "Rueda de boca abajo a boca arriba", "en": "Rolls from tummy to back"},
+      {"id": "apoya_manos", "months": 6, "es": "Se apoya en las manos para no caerse al sentarse", "en": "Leans on hands for support when sitting"},
+      {"id": "sienta_solo", "months": 9, "es": "Se sienta sin apoyo", "en": "Sits without support"},
+      {"id": "llega_sentado", "months": 9, "es": "Llega a sentarse por su cuenta", "en": "Gets to a sitting position alone"}
+    ]},
+    {"id": "de_pie", "area": "movimiento", "es": "Desplazarse y ponerse de pie", "en": "Getting around & standing", "steps": [
+      {"id": "gatea", "months": null, "from_weeks": 27, "optional": true, "es": "Gatea (opcional: no todos los bebés gatean)", "en": "Crawls (optional: not all babies crawl)"},
+      {"id": "se_para", "months": 12, "es": "Se jala para ponerse de pie", "en": "Pulls up to stand"},
+      {"id": "camina_muebles", "months": 12, "es": "Camina agarrándose de los muebles", "en": "Walks holding on to furniture"}
+    ]}
+  ],
+  "stages": [
+    {"id": "m0", "from_weeks": 0, "es": {
+        "title": "Instalación inicial",
+        "summary": "El sistema arranca: reconocer caras y voces, comer, dormir y reiniciarse varias veces al día.",
+        "normal": ["Modo \"Cuna no aceptada\": puede despertar al dejarle en su cuna.", "Batería baja sin aviso: se irrita cuando lleva mucho rato sin dormir.", "Pide tomas más seguido algunos días."],
+        "ideas": ["Háblale cara a cara en sus ratos de calma.", "Ratitos boca abajo, sin dormir y siempre con supervisión.", "Responde a sus sonidos, como si conversaran."],
+        "next": "Podrían venir las primeras sonrisas de respuesta."
+      }, "en": {
+        "title": "Initial install",
+        "summary": "The system boots up: learning faces and voices, eating, sleeping and rebooting several times a day.",
+        "normal": ["\"Crib not accepted\" mode: may wake when put down in the crib.", "Low battery with no warning: gets fussy after being awake a long time.", "Asks to feed more often on some days."],
+        "ideas": ["Talk face to face when they're awake and calm.", "A little tummy time, awake and always supervised.", "Answer their sounds, as if you were chatting."],
+        "next": "First responsive smiles may be on the way."
+      }},
+    {"id": "m2", "from_weeks": 9, "es": {
+        "title": "Actualización de sonrisas",
+        "summary": "Más interacción: sonrisas con intención, arrullos y mucho interés en sus propias manos.",
+        "normal": ["Modo cara seria: puede quedarse observando todo con mucha concentración.", "Las manos son la nueva función favorita y van directo a la boca.", "Los horarios de siesta aún cambian de un día a otro."],
+        "ideas": ["Conversen por turnos: hablas, esperas y le das tiempo de contestar a su manera.", "Tiempo boca abajo, sin dormir y con supervisión, con juguetes a la vista.", "Ofrécele un juguete para que lo sostenga."],
+        "next": "Podrían llegar las risas y las ganas de agarrarlo todo."
+      }, "en": {
+        "title": "Smile update",
+        "summary": "More interaction: smiles on purpose, cooing and a big interest in their own hands.",
+        "normal": ["Serious face mode: may just watch everything with deep focus.", "Hands are the favorite new feature and go straight to the mouth.", "Nap times still change from day to day."],
+        "ideas": ["Take turns talking: you speak, wait, and let them answer their way.", "Awake tummy time with toys in view.", "Offer a toy for them to hold."],
+        "next": "Laughs and grabbing everything may be coming."
+      }},
+    {"id": "m4", "from_weeks": 18, "es": {
+        "title": "Actualización de manos y risas",
+        "summary": "Agarra, prueba con la boca, se ríe y empieza a reconocer a su gente.",
+        "normal": ["Todo pasa por control de calidad en la boca (ojo con objetos pequeños).", "Trompetillas a volumen alto, también durante las comidas.", "Se distrae fácilmente mientras come."],
+        "ideas": ["Pon juguetes seguros a su alcance para que los busque.", "Jueguen frente a un espejo.", "Repite sus sonidos y deja que te responda."],
+        "next": "Podría venir sentarse con más estabilidad."
+      }, "en": {
+        "title": "Hands & laughs update",
+        "summary": "Grabs, tastes, laughs and starts to know their people.",
+        "normal": ["Everything goes through mouth quality control (watch out for small objects).", "High-volume raspberries, mealtimes included.", "Gets easily distracted while feeding."],
+        "ideas": ["Put safe toys within reach so they go after them.", "Play in front of a mirror.", "Repeat their sounds and let them answer."],
+        "next": "Steadier sitting may be coming."
+      }},
+    {"id": "m6", "from_weeks": 27, "es": {
+        "title": "Actualización de movilidad",
+        "summary": "Se sienta, balbucea con ganas y empieza a notar quién está y quién no.",
+        "normal": ["Nueva función \"pena con extraños\": puede preferir solo a su gente.", "Tira cosas para ver si vuelven. Pruebas de sistema.", "Puede protestar cuando te vas de la habitación."],
+        "ideas": ["Jueguen a las escondidas.", "Dile el nombre de lo que ve y de lo que hace.", "Revisa la casa: enchufes, escaleras y objetos pequeños."],
+        "next": "Podrían venir ponerse de pie, los gestos y alguna palabra especial."
+      }, "en": {
+        "title": "Mobility update",
+        "summary": "Sits, babbles eagerly and starts noticing who is around and who isn't.",
+        "normal": ["New \"stranger shyness\" feature: may only want their own people.", "Drops things to see if they come back. System testing.", "May protest when you leave the room."],
+        "ideas": ["Play peek-a-boo.", "Name what they see and what they do.", "Baby-proof: outlets, stairs and small objects."],
+        "next": "Standing, gestures and a special word may be coming."
+      }},
+    {"id": "m9", "from_weeks": 39, "es": {
+        "title": "Versión casi de un año",
+        "summary": "Se pone de pie, se despide con la mano y entiende más de lo que parece.",
+        "normal": ["Entiende el \"no\" y a veces lo prueba de todos modos.", "Agarra hasta la migaja más pequeña del piso.", "Los días con más movimiento pueden cambiar las siestas."],
+        "ideas": ["Jueguen a las palmitas y a decir adiós.", "Escondan un juguete bajo una cobija para que lo busque.", "Dale cubos y un vaso para meter y sacar."],
+        "next": "Los primeros pasos y más palabras suelen llegar después del primer año, cada quien a su ritmo."
+      }, "en": {
+        "title": "Almost-one release",
+        "summary": "Stands up, waves bye-bye and understands more than it seems.",
+        "normal": ["Understands \"no\" and sometimes tests it anyway.", "Finds the tiniest crumb on the floor.", "Busier days can shift naps."],
+        "ideas": ["Play pat-a-cake and wave goodbye.", "Hide a toy under a blanket for them to find.", "Give them blocks and a cup to fill and empty."],
+        "next": "First steps and more words usually come after the first year, each at their own pace."
+      }}
+  ],
+  "notice": {
+    "es": "Es una guía orientativa, no una prueba ni una fecha límite: cada bebé lleva su ritmo. Si algo te preocupa, si pierde habilidades que ya tenía o si tienes dudas, coméntalo con tu pediatra. Con menos de 3 meses, una fiebre de 38 °C o más requiere atención médica de inmediato.",
+    "en": "This is a guide, not a test or a deadline: every baby has their own pace. If something worries you, if they lose skills they had, or if you have questions, talk to your pediatrician. Under 3 months, a fever of 38 °C (100.4 °F) or higher needs medical care right away."
+  }
+}

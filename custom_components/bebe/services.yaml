@@ -438,3 +438,38 @@ listar_panales:
       required: true
       selector:
         datetime:
+
+marcar_hito:
+  fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
+    hito_id:
+      required: true
+      selector:
+        text:
+    fecha:
+      selector:
+        date:
+    nota:
+      selector:
+        text:
+
+desmarcar_hito:
+  fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe
+    hito_id:
+      required: true
+      selector:
+        text:
+
+listar_hitos:
+  fields:
+    bebe:
+      selector:
+        config_entry:
+          integration: bebe

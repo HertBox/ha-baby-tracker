@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
+import json
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -158,6 +160,15 @@ ESQUEMA_LISTAR = vol.Schema({
     vol.Required("hasta"): cv.datetime,
     vol.Optional("borradas", default=False): cv.boolean,
 })
+
+ESQUEMA_HITO = vol.Schema({
+    vol.Required("hito_id"): cv.string,
+    # Día en que lo notaron; sin indicarlo, hoy
+    vol.Optional("fecha"): cv.date,
+    vol.Optional("nota"): cv.string,
+})
+
+ESQUEMA_HITO_ID = vol.Schema({vol.Required("hito_id"): cv.string})
 
 ESQUEMA_MEDIDA = vol.Schema({
     vol.Optional("fecha"): cv.datetime,
@@ -471,6 +482,41 @@ async def _listar_biberones(hass: HomeAssistant, call: ServiceCall) -> ServiceRe
     return {"biberones": await _db(hass, rt.db.biberones_rango, desde, hasta, rt.limites)}
 
 
+# ------------------------------------------------------------------ hitos de desarrollo
+def _leer_ids_hitos() -> set[str]:
+    catalogo = json.loads((Path(__file__).parent / "www" / "bebe-milestones.json").read_text(encoding="utf-8"))
+    return {paso["id"] for habilidad in catalogo["skills"] for paso in habilidad["steps"]}
+
+
+async def _validar_hito(hass: HomeAssistant, hito_id: str) -> None:
+    datos = hass.data[DOMAIN]
+    if "hitos_ids" not in datos:
+        datos["hitos_ids"] = await hass.async_add_executor_job(_leer_ids_hitos)
+    if hito_id not in datos["hitos_ids"]:
+        raise _error("hito_no_existe", id=hito_id)
+
+
+async def _marcar_hito(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
+    rt = _runtime(hass, call)
+    d = call.data
+    await _validar_hito(hass, d["hito_id"])
+    fecha = d.get("fecha") or dt_util.now().date()
+    if fecha > dt_util.now().date():
+        raise _error("fecha_futura", campo="fecha", valor=fecha.isoformat())
+    return await _db(hass, rt.db.marcar_hito, d["hito_id"], fecha.isoformat(), d.get("nota"), await _usuario(hass, call))
+
+
+async def _desmarcar_hito(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
+    rt = _runtime(hass, call)
+    await _validar_hito(hass, call.data["hito_id"])
+    return {"hito_id": call.data["hito_id"], "desmarcado": await _db(hass, rt.db.desmarcar_hito, call.data["hito_id"])}
+
+
+async def _listar_hitos(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
+    rt = _runtime(hass, call)
+    return {"hitos": await _db(hass, rt.db.hitos)}
+
+
 # ------------------------------------------------------------------ medidas
 async def _registrar_medida(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
@@ -521,6 +567,8 @@ SERVICIOS: dict[str, tuple[Handler, vol.Schema]] = {
     "borrar_panal": (_borrar_panal, ESQUEMA_ID_REQ),
     "registrar_medida": (_registrar_medida, ESQUEMA_MEDIDA),
     "borrar_medida": (_borrar_medida, ESQUEMA_ID_REQ),
+    "marcar_hito": (_marcar_hito, ESQUEMA_HITO),
+    "desmarcar_hito": (_desmarcar_hito, ESQUEMA_HITO_ID),
 }
 CONSULTAS: dict[str, tuple[Handler, vol.Schema]] = {
     "listar_tomas": (_listar_tomas, ESQUEMA_LISTAR),
@@ -528,6 +576,7 @@ CONSULTAS: dict[str, tuple[Handler, vol.Schema]] = {
     "listar_reservas": (_listar_reservas, vol.Schema({})),
     "listar_extracciones": (_listar_extracciones, ESQUEMA_LISTAR.extend({vol.Optional("borradas"): cv.boolean})),
     "listar_medidas": (_listar_medidas, vol.Schema({})),
+    "listar_hitos": (_listar_hitos, vol.Schema({})),
     "listar_panales": (_listar_panales, ESQUEMA_LISTAR.extend({vol.Optional("borradas"): cv.boolean})),
 }
 

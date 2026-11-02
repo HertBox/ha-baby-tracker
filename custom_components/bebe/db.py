@@ -15,7 +15,7 @@ from typing import Any
 # Horas: "formula"/"materna" desde la primera toma; "ambiente"/"refrigerador" desde que se hizo
 Limites = dict
 
-VERSION_ESQUEMA = 5
+VERSION_ESQUEMA = 6
 EPS = 1e-6
 
 ESQUEMA = """
@@ -84,6 +84,15 @@ CREATE TABLE IF NOT EXISTS medidas (
     borrado INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_medidas_fecha ON medidas(fecha);
+CREATE TABLE IF NOT EXISTS hitos (
+    hito_id TEXT PRIMARY KEY,
+    fecha TEXT NOT NULL,
+    nota TEXT,
+    registrado_por TEXT,
+    creado TEXT NOT NULL,
+    modificado TEXT,
+    borrado INTEGER NOT NULL DEFAULT 0
+);
 """
 
 CAMPOS_TOMA = (
@@ -753,6 +762,29 @@ class BebeDB:
                 "ORDER BY fin DESC, id DESC LIMIT 1", tipos,
             ).fetchone()
         return dict(fila) if fila else None
+
+    # ------------------------------------------------------------ hitos de desarrollo
+    def marcar_hito(self, hito_id: str, fecha: str, nota: str | None, usuario: str | None) -> dict[str, Any]:
+        """Marca (o corrige) un hito: `fecha` es el día local en que lo notaron (YYYY-MM-DD)."""
+        ahora = ahora_iso()
+        with self._con() as con:
+            con.execute(
+                "INSERT INTO hitos (hito_id, fecha, nota, registrado_por, creado) VALUES (?, ?, ?, ?, ?) "
+                "ON CONFLICT(hito_id) DO UPDATE SET fecha = excluded.fecha, nota = excluded.nota, "
+                "registrado_por = excluded.registrado_por, modificado = ?, borrado = 0",
+                (hito_id, fecha, nota, usuario, ahora, ahora),
+            )
+            return dict(con.execute("SELECT * FROM hitos WHERE hito_id = ?", (hito_id,)).fetchone())
+
+    def desmarcar_hito(self, hito_id: str) -> bool:
+        with self._con() as con:
+            cur = con.execute("UPDATE hitos SET borrado = 1, modificado = ? WHERE hito_id = ? AND borrado = 0",
+                              (ahora_iso(), hito_id))
+            return cur.rowcount > 0
+
+    def hitos(self) -> list[dict[str, Any]]:
+        with self._con() as con:
+            return [dict(f) for f in con.execute("SELECT * FROM hitos WHERE borrado = 0 ORDER BY fecha").fetchall()]
 
     # ------------------------------------------------------------ medidas
     def agregar_medida(self, datos: dict[str, Any]) -> int:

@@ -34,6 +34,7 @@ asistente de voz. Todo se guarda **localmente** en tu Home Assistant (SQLite): s
   % terminados, fórmula desechada, leche extraída, pañales, y *a qué horas* come o se cambia.
 - **Indicación del pediatra**: cantidad por toma e intervalo; la meta diaria y el recordatorio la siguen.
 - **Crecimiento**: historial de peso, talla y perímetro cefálico.
+- **Desarrollo**: primer año semana a semana con los hitos de CDC agrupados en habilidades; márcalos cuando los noten y ve el progreso por habilidad y por área. Es una guía, no una prueba ni una fecha límite.
 - **Varios bebés** (¡gemelos!): una entrada por bebé y un selector en el panel.
 - **oz o ml**, **español o inglés** (según el idioma de cada usuario de Home Assistant).
 - **Blueprints** para botones, recordatorios, caducidad de leche, botones de notificación y voz.
@@ -64,14 +65,15 @@ La pestaña **Ajustes** del panel tiene la indicación del pediatra (cantidad po
 | **Tomas** | Día agrupado por biberón; editar, borrar, mover tomas; pañales del día |
 | **Materna** | Reserva con caducidad, guardar leche, extracciones |
 | **Medidas** | Peso / talla / perímetro y sus gráficas |
+| **Desarrollo** | Primer año semana a semana: hitos por marcar, qué es normal, ideas y progreso por habilidad |
 | **Gráficas** | Día / semana / mes |
 | **Ajustes** | Tamaño del biberón, indicación del pediatra, límites de la leche, sugerencias de los últimos 7 días |
 
 | Tomas | Leche materna |
 |---|---|
 | ![Tomas](docs/img/feedings.png) | ![Leche materna](docs/img/milk.png) |
-| **Gráficas** | **Desarrollo** |
-| ![Gráficas](docs/img/charts.png) | ![Desarrollo](docs/img/growth.png) |
+| **Gráficas** | **Medidas** |
+| ![Gráficas](docs/img/charts.png) | ![Medidas](docs/img/growth.png) |
 
 <details><summary>Ajustes</summary>
 

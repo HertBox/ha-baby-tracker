@@ -797,6 +797,52 @@
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
+    },
+    "marcar_hito": {
+      "name": "Mark milestone",
+      "description": "Marks a developmental milestone as observed.",
+      "fields": {
+        "hito_id": {
+          "name": "Milestone",
+          "description": "Milestone ID in the catalog."
+        },
+        "fecha": {
+          "name": "Date",
+          "description": "Day you noticed it (default: today)."
+        },
+        "nota": {
+          "name": "Note",
+          "description": "Optional comment."
+        },
+        "bebe": {
+          "name": "Baby",
+          "description": "Only if you have several babies: which one it applies to (default: the only one)."
+        }
+      }
+    },
+    "desmarcar_hito": {
+      "name": "Unmark milestone",
+      "description": "Removes the mark from a developmental milestone.",
+      "fields": {
+        "hito_id": {
+          "name": "Milestone",
+          "description": "Milestone ID in the catalog."
+        },
+        "bebe": {
+          "name": "Baby",
+          "description": "Only if you have several babies: which one it applies to (default: the only one)."
+        }
+      }
+    },
+    "listar_hitos": {
+      "name": "List milestones",
+      "description": "Returns the marked developmental milestones.",
+      "fields": {
+        "bebe": {
+          "name": "Baby",
+          "description": "Only if you have several babies: which one it applies to (default: the only one)."
+        }
+      }
     }
   },
   "title": "Baby Tracker",
@@ -891,6 +937,9 @@
     },
     "destino_invalido": {
       "message": "The destination must be 'nuevo' or 'anterior'"
+    },
+    "hito_no_existe": {
+      "message": "That milestone is not in the catalog: {id}"
     }
   }
 }

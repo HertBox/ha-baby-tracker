@@ -152,6 +152,38 @@ function linea({ puntos, unidad, alto = 170 }) {
   return svg + "</svg>";
 }
 
+// ---------- Desarrollo: catálogo en www/bebe-milestones.json ----------
+// Semana en la que cae cada punto de control de CDC (la mayoría de los bebés ya lo hace a esa edad)
+const SEM_CONTROL = [[0, 0], [2, 9], [4, 18], [6, 27], [9, 39], [12, 53]];
+const SEM_FIN = 53;
+const hastaSem = (p) => (p.months ? SEM_CONTROL.find(([m]) => m === p.months)[1] : SEM_FIN);
+const desdeSem = (p) => p.from_weeks ?? SEM_CONTROL[SEM_CONTROL.findIndex(([m]) => m === p.months) - 1][1];
+const txt = (o) => o[IDIOMA];
+const COLOR_AREA = { social: "var(--materna-color, #e91e63)", comunicacion: "var(--info-color, #039be5)",
+  exploracion: "var(--warning-color, #ff9800)", movimiento: "var(--success-color, #43a047)" };
+const TRAZO_AREA = { social: "", comunicacion: "6 3", exploracion: "2 3", movimiento: "10 3 2 3" };
+
+// Curva por área: hitos marcados acumulados según la edad en semanas, hasta la semana actual
+function curvaAreas(series, semHoy) {
+  const W = 640, H = 200, izq = 30, abajo = 24, arriba = 10;
+  const maxY = Math.max(1, ...series.map((s) => s.semanas.length));
+  const X = (w) => izq + (W - izq - 10) * w / SEM_FIN;
+  const Y = (v) => arriba + (H - arriba - abajo) * (1 - v / maxY);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" class="grafica" role="img" aria-label="${esc(t("Hitos marcados por área según la edad"))}">`;
+  new Set([0, 1, 2, 3].map((k) => Math.round(maxY * k / 3))).forEach((v) => {
+    svg += `<line x1="${izq}" x2="${W - 4}" y1="${Y(v)}" y2="${Y(v)}" class="rejilla"/><text x="${izq - 4}" y="${Y(v) + 3}" class="eje" text-anchor="end">${v}</text>`;
+  });
+  SEM_CONTROL.forEach(([m, w]) => { svg += `<text x="${X(w)}" y="${H - 8}" class="eje" text-anchor="middle">${m}${t("m")}</text>`; });
+  const fin = Math.min(semHoy, SEM_FIN);
+  series.forEach((s) => {
+    let n = 0, d = `M${X(0)} ${Y(0)}`;
+    s.semanas.slice().sort((a, b) => a - b).forEach((w) => { n += 1; d += ` H${X(w)} V${Y(n)}`; });
+    d += ` H${X(fin)}`;
+    svg += `<path d="${d}" fill="none" stroke="${COLOR_AREA[s.id]}" stroke-width="2.5" stroke-dasharray="${TRAZO_AREA[s.id]}"><title>${esc(s.nombre)}: ${n}</title></path>`;
+  });
+  return svg + "</svg>";
+}
+
 class BebePanel extends HTMLElement {
   constructor() {
     super();
@@ -236,7 +268,7 @@ class BebePanel extends HTMLElement {
       ${this._bebes.length > 1 ? `<div class="selector-bebe" id="selector-bebe">${this._bebes.map((b) =>
         `<button data-bebe="${b.entry_id}" class="${b.entry_id === this._cfg.entry_id ? "activa" : ""}">${esc(b.nombre)}</button>`).join("")}</div>` : ""}
       <nav class="tabs">
-        ${[["hoy", "Hoy"], ["tomas", "Tomas"], ["materna", "Materna"], ["medidas", "Medidas"], ["graficas", "Gráficas"], ["ajustes", "Ajustes"]]
+        ${[["hoy", "Hoy"], ["tomas", "Tomas"], ["materna", "Materna"], ["medidas", "Medidas"], ["hitos", "Desarrollo"], ["graficas", "Gráficas"], ["ajustes", "Ajustes"]]
           .map(([k, e]) => `<button data-tab="${k}" class="${k === this._tab ? "activa" : ""}">${t(e)}</button>`).join("")}
       </nav>
       <main id="contenido"></main>
@@ -272,6 +304,7 @@ class BebePanel extends HTMLElement {
     if (this._tab === "tomas") { c.innerHTML = `<div id="tomas"></div>`; this._cargarTomas(); }
     if (this._tab === "materna") { c.innerHTML = this._htmlMaterna(); this._eventosMaterna(); this._cargarMaterna(); }
     if (this._tab === "medidas") { c.innerHTML = this._htmlMedidas(); this._eventosMedidas(); this._cargarMedidas(); }
+    if (this._tab === "hitos") { c.innerHTML = `<div id="hitos"></div>`; this._cargarHitos(); }
     if (this._tab === "graficas") { c.innerHTML = this._htmlGraficas(); this._eventosGraficas(); this._pintarGraficas(); }
   }
 
@@ -1140,6 +1173,155 @@ class BebePanel extends HTMLElement {
     });
   }
 
+  // ---------- Desarrollo ----------
+  _semanaDe(fecha) {
+    const nac = new Date(this._cfg.nacimiento + "T00:00");
+    return Math.floor(Math.round((inicioDia(fecha) - nac) / 86400000) / 7);
+  }
+
+  async _cargarHitos() {
+    try {
+      if (!this._catalogo) this._catalogo = await (await fetch("/bebe_static/bebe-milestones.json")).json();
+      const lista = (await this._servicio("listar_hitos", {}, true)).hitos;
+      this._hitos = Object.fromEntries(lista.map((h) => [h.hito_id, h]));
+    } catch (e) { this._aviso(`${t("Error al cargar")}: ${e.message}`); return; }
+    const hoy = Math.min(Math.max(this._semanaDe(new Date()), 0), SEM_FIN - 1);
+    if (this._hSem === undefined || this._hBebe !== this._cfg.entry_id) this._hSem = hoy;
+    this._hBebe = this._cfg.entry_id;
+    this._hAbiertos = this._hAbiertos || new Set();
+    this._pintarHitos();
+  }
+
+  _filaHito(p, habilidad) {
+    const h = this._hitos[p.id];
+    let meta = "";
+    if (h) {
+      const d = new Date(h.fecha + "T00:00");
+      const dias = Math.round((d - new Date(this._cfg.nacimiento + "T00:00")) / 86400000);
+      meta = `${t("Lo notaron el {d}", { d: `${d.getDate()} ${MESES[d.getMonth()]}` })} · ${edadTexto(dias)}`
+        + (h.registrado_por ? ` · ${esc(h.registrado_por)}` : "") + (h.nota ? ` · ${esc(h.nota)}` : "");
+    } else {
+      meta = p.months ? t("La mayoría, hacia los {n} meses", { n: p.months }) : t("Opcional");
+    }
+    return `<button class="hi-item ${h ? "hecho" : ""}" role="checkbox" aria-checked="${h ? "true" : "false"}" data-hito="${p.id}" data-hab="${habilidad.id}">
+      <span class="hi-caja" aria-hidden="true">${h ? "✓" : ""}</span>
+      <span class="hi-txt"><span>${esc(txt(p))}</span><span class="sub">${esc(habilidad[IDIOMA])} · ${meta}</span></span></button>`;
+  }
+
+  _pintarHitos() {
+    const cont = this.shadowRoot.getElementById("hitos"); if (!cont) return;
+    const cat = this._catalogo, w = this._hSem, hoy = this._semanaDe(new Date());
+    const etapa = cat.stages.filter((e) => e.from_weeks <= w).pop();
+    const et = etapa[IDIOMA];
+    const ini = sumarDias(new Date(this._cfg.nacimiento + "T00:00"), w * 7);
+    const fin = sumarDias(ini, 6);
+    const fmt = (d) => `${d.getDate()} ${MESES[d.getMonth()]}`;
+    // Qué toca esta semana, y lo que ya pasó su edad de referencia sin marcar (sin alarma)
+    const delAhora = {}, pendientes = [];
+    cat.skills.forEach((sk) => sk.steps.forEach((p) => {
+      const h = this._hitos[p.id];
+      const enVentana = desdeSem(p) <= w && w < hastaSem(p);
+      const marcadoEsta = h && this._semanaDe(new Date(h.fecha + "T00:00")) === w;
+      if (enVentana || marcadoEsta) (delAhora[sk.area] = delAhora[sk.area] || []).push(this._filaHito(p, sk));
+      else if (!h && hastaSem(p) <= w && p.months) pendientes.push(this._filaHito(p, sk));
+    }));
+    const lista = (items) => `<ul class="hi-lista">${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    const pct = (v) => `${v / SEM_FIN * 100}%`;
+    const series = Object.keys(cat.areas).map((id) => ({ id, nombre: txt(cat.areas[id]),
+      semanas: cat.skills.filter((k) => k.area === id).flatMap((k) => k.steps).filter((p) => this._hitos[p.id])
+        .map((p) => Math.max(0, this._semanaDe(new Date(this._hitos[p.id].fecha + "T00:00")))) }));
+    const total = cat.skills.flatMap((k) => k.steps).length, hechos = Object.keys(this._hitos).length;
+    cont.innerHTML = `
+      <div class="navdia">
+        <button id="sem-ant" aria-label="${t("Semana anterior")}" ${w <= 0 ? "disabled" : ""}>‹</button>
+        <div class="hi-semana"><b>${t("Semana {n}", { n: w })}</b><span class="sub">${fmt(ini)} – ${fmt(fin)}${w === hoy ? ` · ${t("esta semana")}` : ""}</span></div>
+        ${w !== hoy && hoy >= 0 && hoy < SEM_FIN ? `<button class="chip" id="sem-hoy">${t("Hoy")}</button>` : ""}
+        <button id="sem-sig" aria-label="${t("Semana siguiente")}" ${w >= SEM_FIN - 1 ? "disabled" : ""}>›</button>
+      </div>
+      <section class="tarjeta">
+        <div class="sub">${t("Actualización en curso")}</div>
+        <h2>${esc(et.title)}</h2>
+        <p class="hi-p">${esc(et.summary)}</p>
+      </section>
+      <section class="tarjeta">
+        <h2>${t("Puede aparecer en esta etapa")}</h2>
+        ${Object.keys(cat.areas).filter((a) => delAhora[a]).map((a) => `<h3 class="hi-area">${esc(txt(cat.areas[a]))}</h3>${delAhora[a].join("")}`).join("")
+          || `<p class="vacio">${t("Sin hitos nuevos para esta semana.")}</p>`}
+        ${pendientes.length ? `<details class="hi-pend"><summary>${t("Aún sin marcar de etapas anteriores ({n})", { n: pendientes.length })}</summary>
+          <p class="sub">${t("No pasa nada: quizá ya lo hace y no lo han marcado, o llegará a su ritmo.")}</p>${pendientes.join("")}</details>` : ""}
+      </section>
+      <section class="tarjeta"><h2>${t("Normal en esta etapa")}</h2>${lista(et.normal)}</section>
+      <section class="tarjeta"><h2>${t("Ideas para esta etapa")}</h2>${lista(et.ideas)}</section>
+      <section class="tarjeta"><h2>${t("Próxima actualización")}</h2><p class="hi-p">${esc(et.next)}</p></section>
+      <section class="tarjeta">
+        <div class="fila-titulo"><h2>${t("Progreso por habilidad")}</h2><span class="sub">${t("{a} de {b}", { a: hechos, b: total })}</span></div>
+        <p class="sub">${t("La banda es el periodo de referencia, cada punto un hito marcado y la línea la edad de hoy.")}</p>
+        <div class="hi-eje">${SEM_CONTROL.map(([m, sem]) => `<span style="left:${pct(sem)}">${m}${t("m")}</span>`).join("")}</div>
+        ${Object.keys(cat.areas).map((a) => `<h3 class="hi-area">${esc(txt(cat.areas[a]))}</h3>` + cat.skills.filter((k) => k.area === a).map((k) => {
+          const marcados = k.steps.filter((p) => this._hitos[p.id]);
+          const ini0 = Math.min(...k.steps.map(desdeSem)), fin0 = Math.max(...k.steps.map(hastaSem));
+          return `<details class="hi-hab" data-hab="${k.id}" ${this._hAbiertos.has(k.id) ? "open" : ""}>
+            <summary><span class="hi-hab-t"><span>${esc(k[IDIOMA])}</span><span class="sub">${t("{a} de {b}", { a: marcados.length, b: k.steps.length })}</span></span>
+              <span class="hi-pista">
+                <span class="hi-banda" style="left:${pct(ini0)};width:${pct(fin0 - ini0)}"></span>
+                ${hoy >= 0 && hoy <= SEM_FIN ? `<span class="hi-hoy" style="left:${pct(hoy)}"></span>` : ""}
+                ${marcados.map((p) => `<span class="hi-punto" title="${esc(txt(p))}" style="left:${pct(Math.max(0, this._semanaDe(new Date(this._hitos[p.id].fecha + "T00:00"))))}"></span>`).join("")}
+              </span></summary>
+            ${k.steps.map((p) => this._filaHito(p, k)).join("")}
+          </details>`;
+        }).join("")).join("")}
+      </section>
+      <section class="tarjeta">
+        <h2>${t("Hitos marcados por área")}</h2>
+        ${hechos ? curvaAreas(series, hoy) : `<p class="vacio">${t("Sin datos todavía.")}</p>`}
+        <div class="hi-leyenda">${series.map((x) => `<span><svg width="26" height="8" aria-hidden="true"><line x1="0" x2="26" y1="4" y2="4" stroke="${COLOR_AREA[x.id]}" stroke-width="2.5" stroke-dasharray="${TRAZO_AREA[x.id]}"/></svg>${esc(x.nombre)}: ${x.semanas.length}</span>`).join("")}</div>
+      </section>
+      <p class="sub hi-aviso">${esc(txt(cat.notice))}</p>
+      <p class="sub hi-aviso">${t("Hitos y edades:")} <a href="${esc(cat.source.url)}" target="_blank" rel="noopener">${esc(cat.source.name)}</a>. ${t("Las etapas, los consejos y las semanas son una guía propia, no de CDC.")}</p>`;
+    const r = this.shadowRoot;
+    const ir = (n) => { this._hSem = n; this._pintarHitos(); };
+    r.getElementById("sem-ant").onclick = () => ir(w - 1);
+    r.getElementById("sem-sig").onclick = () => ir(w + 1);
+    const bh = r.getElementById("sem-hoy"); if (bh) bh.onclick = () => ir(hoy);
+    cont.querySelectorAll(".hi-hab").forEach((d) => d.addEventListener("toggle", () => {
+      if (d.open) this._hAbiertos.add(d.dataset.hab); else this._hAbiertos.delete(d.dataset.hab);
+    }));
+    cont.querySelectorAll("[data-hito]").forEach((b) => { b.onclick = () => this._marcarHito(b.dataset.hito); });
+  }
+
+  _marcarHito(id) {
+    const paso = this._catalogo.skills.flatMap((k) => k.steps).find((p) => p.id === id);
+    const h = this._hitos[id];
+    const hoy = inicioDia(new Date());
+    // En una semana pasada, el día propuesto es el último de esa semana
+    const finSem = sumarDias(new Date(this._cfg.nacimiento + "T00:00"), this._hSem * 7 + 6);
+    const propuesta = h ? h.fecha : fechaISO(finSem < hoy ? finSem : hoy);
+    const { dlg, cerrar } = this._modal(`
+      <h2>${esc(txt(paso))}</h2>
+      <form class="form" id="form-hito" onsubmit="return false">
+        <label class="completo">${t("¿Cuándo lo notaron?")}<input type="date" name="fecha" value="${propuesta}" min="${this._cfg.nacimiento}" max="${fechaISO(hoy)}"></label>
+        <label class="completo">${t("Nota")}<input type="text" name="nota" value="${esc(h ? h.nota || "" : "")}" placeholder="${t("opcional")}"></label>
+      </form>
+      <div class="botones">
+        ${h ? `<button class="peligro" id="desmarcar">${t("Desmarcar")}</button>` : ""}
+        <span class="flex"></span>
+        <button class="secundario" id="cancelar">${t("Cancelar")}</button>
+        <button class="primario" id="guardar-hito">${t("Guardar")}</button>
+      </div>`);
+    dlg.querySelector("#guardar-hito").onclick = async () => {
+      const f = dlg.querySelector("#form-hito");
+      if (!f.fecha.value) { this._aviso(t("Indica la fecha")); return; }
+      const nota = f.nota.value.trim();
+      await this._accion(() => this._servicio("marcar_hito", { hito_id: id, fecha: f.fecha.value, ...(nota ? { nota } : {}) }, true), t("¡Hito instalado!"));
+      cerrar(); this._cargarHitos();
+    };
+    const d = dlg.querySelector("#desmarcar");
+    if (d) d.onclick = async () => {
+      await this._accion(() => this._servicio("desmarcar_hito", { hito_id: id }, true), t("Hito desmarcado"));
+      cerrar(); this._cargarHitos();
+    };
+  }
+
   // ---------- Gráficas ----------
   _htmlGraficas() {
     return `
@@ -1427,6 +1609,28 @@ h2.sep { margin-top:18px; }
 .ayuda { font-size:11px; color:var(--secondary-text-color); }
 #sugerencia p { margin:0 0 8px; }
 .rejilla { stroke:var(--divider-color); stroke-width:1; }
+.hi-semana { flex:1; text-align:center; display:flex; flex-direction:column; }
+.hi-p { margin:6px 0 0; font-size:14px; line-height:1.4; }
+.hi-area { margin:14px 0 4px; font-size:13px; font-weight:500; color:var(--secondary-text-color); }
+.hi-item { display:flex; gap:10px; width:100%; align-items:flex-start; text-align:left; background:none; border:0; border-top:1px solid var(--divider-color);
+  padding:9px 2px; color:var(--primary-text-color); font:inherit; font-size:14px; cursor:pointer; }
+.hi-caja { flex:none; width:20px; height:20px; border:2px solid var(--secondary-text-color); border-radius:5px; box-sizing:border-box;
+  display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; }
+.hi-item.hecho .hi-caja { background:var(--primary-color); border-color:var(--primary-color); }
+.hi-txt { display:flex; flex-direction:column; min-width:0; }
+.hi-lista { margin:6px 0 0; padding-left:20px; font-size:14px; line-height:1.45; } .hi-lista li { margin-bottom:4px; }
+.hi-pend { margin-top:12px; } .hi-pend summary { cursor:pointer; font-size:14px; color:var(--primary-color); }
+.hi-eje { position:relative; height:16px; margin-top:8px; font-size:11px; color:var(--secondary-text-color); }
+.hi-eje span { position:absolute; transform:translateX(-50%); } .hi-eje span:first-child { transform:none; } .hi-eje span:last-child { transform:translateX(-100%); }
+.hi-hab summary { list-style:none; cursor:pointer; padding:6px 0; color:var(--primary-text-color); } .hi-hab summary::-webkit-details-marker { display:none; }
+.hi-hab-t { display:flex; justify-content:space-between; gap:8px; font-size:14px; }
+.hi-pista { display:block; position:relative; height:12px; margin-top:4px; }
+.hi-banda { position:absolute; top:3px; height:6px; border-radius:3px; background:var(--divider-color); }
+.hi-hoy { position:absolute; top:0; width:2px; height:12px; background:var(--primary-text-color); opacity:.55; }
+.hi-punto { position:absolute; top:1px; width:10px; height:10px; margin-left:-5px; border-radius:50%; background:var(--primary-color); border:1px solid var(--card-background-color); box-sizing:border-box; }
+.hi-leyenda { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; font-size:12px; color:var(--secondary-text-color); }
+.hi-leyenda span { display:inline-flex; align-items:center; gap:5px; }
+.hi-aviso { margin:0 4px 10px; line-height:1.4; } .hi-aviso a { color:var(--primary-color); }
 .eje { fill:var(--secondary-text-color); font-size:11px; }
 .valor { fill:var(--primary-text-color); font-size:10px; }
 .meta { stroke:var(--error-color, #db4437); stroke-width:2; stroke-dasharray:6 4; }
@@ -1452,6 +1656,14 @@ const EN = {
   "Blanco / gris": "White / gray", "No sé": "Not sure",
   "Líquida": "Watery", "Grumosa": "Seedy", "Pastosa": "Pasty", "Dura": "Hard",
   // pestañas y periodos
+  "Desarrollo": "Milestones", "m": "m", "Semana {n}": "Week {n}", "esta semana": "this week", "Semana anterior": "Previous week", "Semana siguiente": "Next week",
+  "Actualización en curso": "Update in progress", "Puede aparecer en esta etapa": "May show up at this stage", "Sin hitos nuevos para esta semana.": "No new milestones this week.",
+  "Aún sin marcar de etapas anteriores ({n})": "Not marked yet from earlier stages ({n})", "No pasa nada: quizá ya lo hace y no lo han marcado, o llegará a su ritmo.": "No worries: maybe it already happens and just isn't marked, or it will come at their own pace.",
+  "Normal en esta etapa": "Normal at this stage", "Ideas para esta etapa": "Ideas for this stage", "Próxima actualización": "Next update", "Progreso por habilidad": "Progress by skill",
+  "La banda es el periodo de referencia, cada punto un hito marcado y la línea la edad de hoy.": "The band is the reference period, each dot a marked milestone and the line today's age.",
+  "Hitos marcados por área": "Milestones marked by area", "Hitos marcados por área según la edad": "Milestones marked by area, by age", "Lo notaron el {d}": "Noticed on {d}",
+  "La mayoría, hacia los {n} meses": "Most babies by {n} months", "Opcional": "Optional", "¿Cuándo lo notaron?": "When did you notice it?", "Desmarcar": "Unmark", "Indica la fecha": "Enter the date",
+  "¡Hito instalado!": "Milestone installed!", "Hito desmarcado": "Milestone unmarked", "Hitos y edades:": "Milestones and ages:", "Las etapas, los consejos y las semanas son una guía propia, no de CDC.": "Stages, tips and weeks are our own guide, not from the CDC.",
   "Hoy": "Today", "Tomas": "Feedings", "Medidas": "Growth", "Gráficas": "Charts", "Ajustes": "Settings",
   "Día": "Day", "Semana": "Week", "Mes": "Month",
   // tiempo y edad

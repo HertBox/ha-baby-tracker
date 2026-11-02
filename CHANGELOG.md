@@ -3,6 +3,14 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico (MAYOR.MENOR.PARCHE).
 Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones menores.
 
+## [1.2.0] - 2026-11-02
+### Agregado
+- Pestaña Desarrollo (Milestones): primer año de vida, semana por semana, con los 59 hitos de CDC de 2, 4, 6, 9 y 12 meses agrupados
+  en 14 habilidades. Se marca el día en que los notaron; hay progreso por habilidad, línea de tiempo y gráfica por área.
+  Las etapas, lo normal, las ideas y las semanas son texto propio orientativo, no de CDC.
+- Acciones `bebe.marcar_hito`, `bebe.desmarcar_hito` y `bebe.listar_hitos`.
+- Esquema de base v6 (tabla `hitos`), con copia automática antes de migrar.
+
 ## [1.1.0] - 2026-10-05
 ### Agregado
 - Referencia del día en **Hoy**: dos metas, **mínimo** e **ideal** (la menor y la mayor entre la del pediatra y la
