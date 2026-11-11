@@ -312,16 +312,16 @@ class BebePanel extends HTMLElement {
   _htmlHoy() {
     return `
       <section class="hero" id="hero"></section>
-      <section class="tarjeta" id="biberon"></section>
-      <section class="tarjeta" id="panal"></section>
-      <section class="kpis" id="kpis"></section>
       <section class="tarjeta">
+        <div id="biberon"></div>
         <details id="detalle">
           <summary>${t("Registrar con otra hora…")}</summary>
           ${this._formToma({ fin: aInputLocal(new Date()), oz_tomadas: "", tipo: "formula" }, "nueva", true)}
           <button class="primario" id="guardar-nueva">${t("Guardar toma")}</button>
         </details>
-      </section>`;
+      </section>
+      <section class="tarjeta" id="panal"></section>
+      <section class="kpis" id="kpis"></section>`;
   }
 
   _biberon() {
