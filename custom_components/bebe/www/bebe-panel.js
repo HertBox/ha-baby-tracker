@@ -523,7 +523,10 @@ class BebePanel extends HTMLElement {
         <button class="chip" data-p="pipi">${TIPOS_PANAL.pipi}</button>
         <button class="chip" data-p="popo">${TIPOS_PANAL.popo}</button>
         <button class="chip" data-p="ambos">${TIPOS_PANAL.ambos}</button>
-      </div>`;
+      </div>
+      <details><summary id="panal-otra-hora">${t("Registrar con otra hora…")}</summary></details>`;
+    // Same look as the feeding card's "Log with a different time…"; opens the diaper form instead of expanding.
+    el.querySelector("#panal-otra-hora").onclick = (e) => { e.preventDefault(); this._editarPanal(null, new Date()); };
     el.querySelector("#chips-panal").onclick = (e) => {
       const b = e.target.closest("button[data-p]"); if (!b) return;
       this._registrarPanal(b.dataset.p);
@@ -585,7 +588,7 @@ class BebePanel extends HTMLElement {
       ? { tipo: "pipi", fin: aInputLocal(base), color: this._cfg.color_popo, consistencia: this._cfg.consistencia_popo }
       : { ...p, fin: aInputLocal(new Date(p.fin)) };
     const { dlg, cerrar } = this._modal(`
-      <h2>${nuevo ? t("Nuevo pañal") : t("Pañal de las {h}", { h: hora(p.fin) })}</h2>
+      <h2>${nuevo ? t("Cambio de pañal") : t("Pañal de las {h}", { h: hora(p.fin) })}</h2>
       <form class="form" id="form-panal" onsubmit="return false">
         <label class="completo">${t("Hora")}<input type="datetime-local" name="fin" value="${datos.fin}"></label>
         <label class="completo">${t("Tipo")}<select name="tipo">${Object.entries(TIPOS_PANAL).map(([k, v]) => `<option value="${k}" ${k === datos.tipo ? "selected" : ""}>${v}</option>`).join("")}</select></label>
@@ -1721,7 +1724,8 @@ const EN = {
   "Pañal": "Diaper", "último": "last", "Último pipí": "Last pee", "Pañal registrado:": "Diaper logged:",
   "este color conviene comentarlo con el pediatra": "this color is worth mentioning to the pediatrician",
   "¿Cómo fue la popó?": "What was the poop like?", "Elige color y consistencia (o \"No sé\")": "Choose color and consistency (or \"Not sure\")",
-  "Nuevo pañal": "New diaper", "Pañal de las {h}": "Diaper at {h}",
+  "Cambio de pañal": "Diaper change",
+  "Pañal de las {h}": "Diaper at {h}",
   "Para popó elige color y consistencia (o \"No sé\")": "For poop choose color and consistency (or \"Not sure\")",
   "Pañal agregado": "Diaper added", "Pañal actualizado": "Diaper updated", "¿Borrar este pañal?": "Delete this diaper?", "Pañal borrado": "Diaper deleted",
   "Toma guardada": "Feeding saved",
