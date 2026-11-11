@@ -269,7 +269,9 @@ class BebePanel extends HTMLElement {
         `<button data-bebe="${b.entry_id}" class="${b.entry_id === this._cfg.entry_id ? "activa" : ""}">${esc(b.nombre)}</button>`).join("")}</div>` : ""}
       <nav class="tabs">
         ${[["hoy", "Hoy"], ["tomas", "Tomas"], ["materna", "Materna"], ["medidas", "Medidas"], ["hitos", "Desarrollo"], ["graficas", "Gráficas"], ["ajustes", "Ajustes"]]
-          .map(([k, e]) => `<button data-tab="${k}" class="${k === this._tab ? "activa" : ""}">${t(e)}</button>`).join("")}
+          .map(([k, e]) => k === "ajustes"
+            ? `<button data-tab="${k}" class="engranaje ${k === this._tab ? "activa" : ""}" title="${t(e)}" aria-label="${t(e)}"><ha-icon icon="mdi:cog"></ha-icon></button>`
+            : `<button data-tab="${k}" class="${k === this._tab ? "activa" : ""}">${t(e)}</button>`).join("")}
       </nav>
       <main id="contenido"></main>
       <div id="dialogo"></div>`;
@@ -1476,6 +1478,8 @@ const ESTILOS = `
 .tabs button { flex:1; background:none; border:0; color:var(--app-header-text-color, #fff); opacity:.7; padding:12px 1px;
   font-size:12px; border-bottom:3px solid transparent; cursor:pointer; }
 .tabs button.activa { opacity:1; border-bottom-color:var(--app-header-text-color, #fff); font-weight:500; }
+.tabs button.engranaje { flex:0 0 auto; padding:10px 14px 7px; }
+.tabs button.engranaje ha-icon { --mdc-icon-size:22px; display:flex; }
 main { max-width:760px; margin:0 auto; padding:12px 12px 80px; }
 .tarjeta { background:var(--card-background-color); border-radius:var(--ha-card-border-radius, 12px); padding:14px 16px; margin-bottom:12px;
   box-shadow:var(--ha-card-box-shadow, 0 1px 3px rgba(0,0,0,.15)); }
